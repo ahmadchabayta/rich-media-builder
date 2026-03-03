@@ -1,0 +1,145 @@
+@import "@mantine/core/styles.css";
+@import "@mantine/notifications/styles.css";
+@import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-family: sans-serif;
+}
+
+/* Dark scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Board dot-grid background */
+.canvas-container {
+  background-color: #d1d5db;
+  background-image: radial-gradient(#9ca3af 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Frame cards */
+.frame-card {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  overflow: visible;
+  transition: border-color 0.15s;
+  background: #0f172a;
+}
+.frame-card.active {
+  border-color: #3b82f6;
+}
+.frame-card:hover:not(.active) {
+  border-color: #475569;
+}
+
+.frame-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #1e293b;
+  border-radius: 6px 6px 0 0;
+  cursor: grab;
+  user-select: none;
+  gap: 6px;
+}
+.frame-handle:active {
+  cursor: grabbing;
+}
+
+.frame-badge {
+  font-size: 9px;
+  background: #0f172a;
+  color: #64748b;
+  border: 1px solid #334155;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.frame-canvas {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.frame-resize-grip {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, #3b82f6 50%);
+  border-radius: 0 0 6px 0;
+  opacity: 0.7;
+  z-index: 10;
+}
+.frame-resize-grip:hover {
+  opacity: 1;
+}
+
+.frame-del {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  display: none;
+  z-index: 20;
+  padding: 0;
+}
+.frame-card:hover .frame-del {
+  display: block;
+}
+
+/* Rulers */
+.ruler-corner {
+  background: #e5e7eb;
+  border-right: 1px solid #9ca3af;
+  border-bottom: 1px solid #9ca3af;
+  font-size: 6px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  line-height: 1.1;
+  padding: 1px;
+  text-align: center;
+}
+canvas.ruler-h,
+canvas.ruler-v {
+  display: block;
+}
