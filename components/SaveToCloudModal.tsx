@@ -14,6 +14,7 @@ import {
   Divider,
   Badge,
   TagsInput,
+  LoadingOverlay,
 } from "@mantine/core";
 import { DatePickerInput, type DateValue } from "@mantine/dates";
 import { IconCloudUpload, IconExternalLink } from "@tabler/icons-react";
@@ -74,10 +75,10 @@ interface Props {
 export function SaveToCloudModal({ opened, onClose }: Props) {
   const { saveToCloud, saving } = useSanityCloud();
   const cloudProjectId = useQuizStore((s) => s.cloudProjectId);
-  const cloudMeta = useQuizStore((s) => s.cloudMeta);
   const defaultW = useQuizStore((s) => s.defaultW);
   const defaultH = useQuizStore((s) => s.defaultH);
 
+  const [metaLoading, setMetaLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState("draft");
   const [format, setFormat] = useState<string | null>(null);
@@ -93,26 +94,35 @@ export function SaveToCloudModal({ opened, onClose }: Props) {
   const [interests, setInterests] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
 
-  // Pre-populate form from last saved metadata when modal opens
+  // When modal opens with an existing project — fetch its metadata from Sanity
   useEffect(() => {
     if (!opened) return;
-    if (cloudMeta) {
-      setTitle(cloudMeta.title ?? "");
-      setStatus(cloudMeta.status ?? "draft");
-      setFormat(cloudMeta.format ?? null);
-      setClient(cloudMeta.client ?? "");
-      setNotes(cloudMeta.notes ?? "");
-      setPublishDate(cloudMeta.publishDate ? new Date(cloudMeta.publishDate) : null);
-      setEndDate(cloudMeta.endDate ? new Date(cloudMeta.endDate) : null);
-      setPlatforms(cloudMeta.platforms ?? []);
-      setTags(cloudMeta.tags ?? []);
-      setAgeRanges(cloudMeta.audience?.ageRanges ?? []);
-      setGender(cloudMeta.audience?.gender ?? "all");
-      setDevices(cloudMeta.audience?.devices ?? []);
-      setInterests(cloudMeta.audience?.interests ?? []);
-      setRegions(cloudMeta.audience?.regions ?? []);
-    }
-  }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!cloudProjectId) return;
+    setMetaLoading(true);
+    fetch(`/api/cloud/projects/${cloudProjectId}`)
+      .then((r) => r.json())
+      .then((doc) => {
+        if (!doc || doc.error) return;
+        setTitle(doc.title ?? "");
+        setStatus(doc.status ?? "draft");
+        setFormat(doc.format ?? null);
+        setClient(doc.client ?? "");
+        setNotes(doc.notes ?? "");
+        setPublishDate(doc.publishDate ? new Date(doc.publishDate) : null);
+        setEndDate(doc.endDate ? new Date(doc.endDate) : null);
+        setPlatforms(doc.platforms ?? []);
+        setTags(doc.tags ?? []);
+        setAgeRanges(doc.audience?.ageRanges ?? []);
+        setGender(doc.audience?.gender ?? "all");
+        setDevices(doc.audience?.devices ?? []);
+        setInterests(doc.audience?.interests ?? []);
+        setRegions(doc.audience?.regions ?? []);
+      })
+      .catch(() => {
+        /* keep defaults */
+      })
+      .finally(() => setMetaLoading(false));
+  }, [opened, cloudProjectId]);
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -156,6 +166,7 @@ export function SaveToCloudModal({ opened, onClose }: Props) {
       }
       size="lg"
     >
+      <LoadingOverlay visible={metaLoading} overlayProps={{ blur: 1 }} />
       <Stack gap="md">
         {/* ── Overview ── */}
         <TextInput
