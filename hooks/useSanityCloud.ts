@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { notifications } from "@mantine/notifications";
 import { useQuizStore } from "@src/store/quizStore";
+import type { CloudMeta } from "@src/store/quizStore";
 import { prepareSnapshot } from "@src/lib/sanity/imageUtils";
 
 export interface CloudProjectMeta {
@@ -20,18 +21,7 @@ export interface CloudProjectMeta {
   campaignName?: string;
 }
 
-export interface SaveMeta {
-  title: string;
-  status?: string;
-  format?: string;
-  client?: string;
-  notes?: string;
-  publishDate?: string;
-  endDate?: string;
-  platforms?: string[];
-  tags?: string[];
-  audience?: Record<string, unknown>;
-}
+export type SaveMeta = CloudMeta;
 
 export function useSanityCloud() {
   const [saving, setSaving] = useState(false);
@@ -40,6 +30,7 @@ export function useSanityCloud() {
   const [projectsLoading, setProjectsLoading] = useState(false);
 
   const setCloudProjectId = useQuizStore((s) => s.setCloudProjectId);
+  const setCloudMeta = useQuizStore((s) => s.setCloudMeta);
 
   /** Save (or update) the current project to Sanity. */
   const saveToCloud = useCallback(
@@ -86,6 +77,7 @@ export function useSanityCloud() {
 
         const { id } = await res.json();
         setCloudProjectId(id);
+        setCloudMeta(meta);
 
         notifications.update({
           id: notifId,

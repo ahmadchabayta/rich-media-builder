@@ -3,6 +3,25 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { Frame, FrameObject, QuizData } from "@src/lib/types";
 import { idbStorage } from "@src/lib/idbStorage";
 
+export interface CloudMeta {
+  title: string;
+  status?: string;
+  format?: string;
+  client?: string;
+  notes?: string;
+  publishDate?: string;
+  endDate?: string;
+  platforms?: string[];
+  tags?: string[];
+  audience?: {
+    ageRanges?: string[];
+    gender?: string;
+    devices?: string[];
+    interests?: string[];
+    regions?: string[];
+  };
+}
+
 /** Serialisable snapshot written to disk or localStorage. */
 export interface ProjectSnapshot {
   version: number;
@@ -88,6 +107,8 @@ export interface QuizState {
   // Cloud sync
   cloudProjectId: string | null;
   setCloudProjectId: (id: string | null) => void;
+  cloudMeta: CloudMeta | null;
+  setCloudMeta: (meta: CloudMeta) => void;
 
   // History
   snapshot: () => void; // push current quizData onto undo stack
@@ -117,6 +138,7 @@ export const useQuizStore = create<QuizState>()(
       pastSnapshots: [],
       futureSnapshots: [],
       cloudProjectId: null,
+      cloudMeta: null,
 
       getActiveFrame: () => {
         const { quizData, currentPreviewIndex } = get();
@@ -333,6 +355,7 @@ export const useQuizStore = create<QuizState>()(
         }),
 
       setCloudProjectId: (id) => set({ cloudProjectId: id }),
+      setCloudMeta: (meta) => set({ cloudMeta: meta }),
 
       // ─── History ──────────────────────────────────────────────────
       snapshot: () => {
@@ -437,6 +460,7 @@ export const useQuizStore = create<QuizState>()(
         currentPreviewIndex: s.currentPreviewIndex,
         snapEnabled: s.snapEnabled,
         cloudProjectId: s.cloudProjectId,
+        cloudMeta: s.cloudMeta,
       }),
     },
   ),

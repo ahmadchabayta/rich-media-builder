@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Modal,
   Stack,
@@ -74,6 +74,7 @@ interface Props {
 export function SaveToCloudModal({ opened, onClose }: Props) {
   const { saveToCloud, saving } = useSanityCloud();
   const cloudProjectId = useQuizStore((s) => s.cloudProjectId);
+  const cloudMeta = useQuizStore((s) => s.cloudMeta);
   const defaultW = useQuizStore((s) => s.defaultW);
   const defaultH = useQuizStore((s) => s.defaultH);
 
@@ -91,6 +92,27 @@ export function SaveToCloudModal({ opened, onClose }: Props) {
   const [devices, setDevices] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
+
+  // Pre-populate form from last saved metadata when modal opens
+  useEffect(() => {
+    if (!opened) return;
+    if (cloudMeta) {
+      setTitle(cloudMeta.title ?? "");
+      setStatus(cloudMeta.status ?? "draft");
+      setFormat(cloudMeta.format ?? null);
+      setClient(cloudMeta.client ?? "");
+      setNotes(cloudMeta.notes ?? "");
+      setPublishDate(cloudMeta.publishDate ? new Date(cloudMeta.publishDate) : null);
+      setEndDate(cloudMeta.endDate ? new Date(cloudMeta.endDate) : null);
+      setPlatforms(cloudMeta.platforms ?? []);
+      setTags(cloudMeta.tags ?? []);
+      setAgeRanges(cloudMeta.audience?.ageRanges ?? []);
+      setGender(cloudMeta.audience?.gender ?? "all");
+      setDevices(cloudMeta.audience?.devices ?? []);
+      setInterests(cloudMeta.audience?.interests ?? []);
+      setRegions(cloudMeta.audience?.regions ?? []);
+    }
+  }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     if (!title.trim()) return;
