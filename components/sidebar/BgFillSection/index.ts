@@ -1,0 +1,1 @@
+﻿export { BgFillSection } from "./BgFillSection";

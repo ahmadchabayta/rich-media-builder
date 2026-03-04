@@ -1,0 +1,1 @@
+﻿export { BgImageSection } from "./BgImageSection";

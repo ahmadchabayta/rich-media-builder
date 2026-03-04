@@ -1,37 +1,48 @@
-﻿import type { QuizData } from "./types";
-import { FONT_LIST } from "./fonts";
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { QuizData, CustomAnim } from "./types";
+import { compileKeyframesCSS } from "./animCompiler";
+import { SYSTEM_FONTS } from "./fonts";
 
-/** Collect unique Google Font families used across all text objects. */
+/**
+ * Collect Google Font <link> tags for every font used in the document.
+ * Weights are derived from the actual fontWeight values on text objects so
+ * arbitrary (non-curated) fonts still get a correct URL.
+ */
 function collectGoogleFontLinks(quizData: QuizData): string {
-  const needed = new Map<string, string[]>(); // family → weights
+  // family → Set of numeric weight strings actually used in the document
+  const needed = new Map<string, Set<string>>();
+
   for (const frame of quizData.frames) {
     for (const obj of frame.objects) {
       if (obj.type !== "text") continue;
       const family = (obj as any).fontFamily as string | undefined;
       if (!family) continue;
+      if (SYSTEM_FONTS.has(family)) continue; // system font – no link needed
 
-      const def = FONT_LIST.find((f) => f.family === family);
-      if (def?.source === "system") continue; // system font, no link needed
-
-      // Google font (known or unknown — attempt to load it either way)
-      if (!needed.has(family)) {
-        needed.set(family, def?.weights ?? ["400", "700"]);
-      }
+      if (!needed.has(family)) needed.set(family, new Set());
+      const fw = (obj as any).fontWeight as string | undefined;
+      if (fw) needed.get(family)!.add(String(fw));
     }
   }
+
   if (needed.size === 0) return "";
-  const links: string[] = [
+
+  const lines: string[] = [
     `  <link rel="preconnect" href="https://fonts.googleapis.com">`,
     `  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`,
   ];
-  for (const [family, weights] of needed) {
-    const w = weights.join(";");
+  for (const [family, weightSet] of needed) {
     const encoded = encodeURIComponent(family).replace(/%20/g, "+");
-    links.push(
-      `  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${encoded}:wght@${w}&display=swap">`,
+    // Always include 400 & 700 as a safety baseline, plus whatever is explicitly used
+    const allWeights = [...new Set([...weightSet, "400", "700"])].sort(
+      (a, b) => parseInt(a) - parseInt(b),
+    );
+    const axis = `:wght@${allWeights.join(";")}`;
+    lines.push(
+      `  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${encoded}${axis}&display=swap">`,
     );
   }
-  return links.join("\n");
+  return lines.join("\n");
 }
 
 export interface ExportFiles {
@@ -54,9 +65,85 @@ function dataAttr(obj: unknown): string {
   return escAttr(JSON.stringify(obj));
 }
 
+/** Normalize answer text into a tracking-friendly slug */
+function normalizeAnswerSlug(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 60);
+}
+
 //  Build one object as static HTML (styles  cssRules array)
 
 type AnsIdxRef = { v: number };
+
+/** Build extra data attributes for loop/hover/click */
+function customAnimToLoopCfg(ca: CustomAnim): Record<string, unknown> {
+  return {
+    type: ca.name,
+    dur: ca.dur,
+    delay: ca.delay || 0,
+    easing: ca.easing || "ease-in-out",
+    iterationCount: "infinite",
+    direction: ca.direction || "alternate",
+    fillMode: ca.fillMode || "both",
+  };
+}
+
+function extraDataAttrs(o: any): string {
+  let s = "";
+  const loop = o.customAnimLoop
+    ? customAnimToLoopCfg(o.customAnimLoop)
+    : o.animLoop;
+  if (loop?.type && loop.type !== "none")
+    s += ` data-anim-loop="${dataAttr(loop)}"`;
+  if (o.hoverEffect?.type && o.hoverEffect.type !== "none")
+    s += ` data-hover="${escAttr(o.hoverEffect.type)}"`;
+  if (o.clickEffect?.type && o.clickEffect.type !== "none")
+    s += ` data-click="${escAttr(o.clickEffect.type)}"`;
+  return s;
+}
+
+/** Map hover type → CSS declaration block for :hover pseudo-class */
+const HOVER_CSS_MAP: Record<string, string> = {
+  lift: "transform:translateY(-4px);box-shadow:0 6px 16px rgba(0,0,0,.25);",
+  grow: "transform:scale(1.08);",
+  shrink: "transform:scale(0.94);",
+  glow: "box-shadow:0 0 16px 4px rgba(255,255,255,.5);",
+  dim: "opacity:0.55;",
+  brighten: "filter:brightness(1.25);",
+  tilt: "transform:rotate(3deg);",
+  underline: "text-decoration:underline;text-underline-offset:4px;",
+};
+
+/** Emit hover/click CSS rules for an object class */
+function emitInteractionCss(
+  o: any,
+  cls: string,
+  cssRules: string[],
+  isAnswerGroup = false,
+): void {
+  // For answerGroup, target individual .ans-btn children, not the wrapper
+  const sel = isAnswerGroup ? `.${cls} .ans-btn` : `.${cls}`;
+  const hType = o.hoverEffect?.type;
+  if (hType && hType !== "none" && HOVER_CSS_MAP[hType]) {
+    cssRules.push(`${sel}{transition:all .25s ease}`);
+    cssRules.push(`${sel}:hover{${HOVER_CSS_MAP[hType]}}`);
+  }
+  const cType = o.clickEffect?.type;
+  if (cType && cType !== "none") {
+    cssRules.push(`${sel}:active{animation:${cType} .35s ease}`);
+  }
+  // non-answerGroup interactive elements need pointer-events:auto + cursor:pointer
+  if (
+    !isAnswerGroup &&
+    ((hType && hType !== "none") || (cType && cType !== "none"))
+  ) {
+    cssRules.push(`.${cls}{pointer-events:auto;cursor:pointer}`);
+  }
+}
 
 function buildObjectHtml(
   o: any,
@@ -67,10 +154,41 @@ function buildObjectHtml(
   cssRules: string[],
 ): string {
   void frameW;
-  const animIn = o.animIn || { type: "none" };
-  const animOut = o.animOut || { type: "none" };
+  let animIn: any = o.animIn || { type: "none" };
+  let animOut: any = o.animOut || { type: "none" };
   const role = o.role || "other";
   const cls = `p${fi}-o${oi}`;
+
+  // Compile custom animation @keyframes and override preset configs
+  if (o.customAnimIn) {
+    const ca: CustomAnim = o.customAnimIn;
+    cssRules.push(compileKeyframesCSS(ca));
+    animIn = {
+      type: ca.name,
+      dur: ca.dur,
+      delay: ca.delay || 0,
+      easing: ca.easing || "ease",
+      iterationCount: ca.iterationCount || 1,
+      direction: ca.direction || "normal",
+      fillMode: ca.fillMode || "both",
+    };
+  }
+  if (o.customAnimOut) {
+    const ca: CustomAnim = o.customAnimOut;
+    cssRules.push(compileKeyframesCSS(ca));
+    animOut = {
+      type: ca.name,
+      dur: ca.dur,
+      delay: ca.delay || 0,
+      easing: ca.easing || "ease",
+      iterationCount: ca.iterationCount || 1,
+      direction: ca.direction || "normal",
+      fillMode: ca.fillMode || "both",
+    };
+  }
+  if (o.customAnimLoop) {
+    cssRules.push(compileKeyframesCSS(o.customAnimLoop));
+  }
 
   //  answerGroup
   if (o.type === "answerGroup") {
@@ -93,26 +211,51 @@ function buildObjectHtml(
     cssRules.push(
       `.${cls} .ans-btn{width:100%;height:${bh}px;background:${rgba};border-radius:${brad}px;` +
         `color:${color};font-size:${fs}px;font-weight:700;` +
-        `display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none}`,
+        `display:flex;align-items:center;justify-content:center;overflow:hidden;` +
+        `pointer-events:auto;cursor:pointer;position:relative}`,
     );
     cssRules.push(`.${cls} .ans-btn:not(:last-child){margin-bottom:${gap}px}`);
 
+    // Per-button hover/click data attrs
+    const hoverAttr =
+      o.hoverEffect?.type && o.hoverEffect.type !== "none"
+        ? ` data-hover="${escAttr(o.hoverEffect.type)}"`
+        : "";
+    const clickAttr =
+      o.clickEffect?.type && o.clickEffect.type !== "none"
+        ? ` data-click="${escAttr(o.clickEffect.type)}"`
+        : "";
+
     const buttons = (o.answers || [])
-      .map((ans: { text?: string; src?: string }, ai: number) => {
+      .map((ans: { id?: string; text?: string; src?: string }, ai: number) => {
         const idx = ansRef.v++;
+        const answerText = ans.text ?? `Answer ${ai + 1}`;
+        const slug = normalizeAnswerSlug(answerText);
         const inner = ans.src
           ? `<img src="${escAttr(ans.src)}" class="ans-img">`
-          : escText(ans.text ?? `Answer ${ai + 1}`);
+          : escText(answerText);
         return (
           `<div class="ans-btn" data-role="answer" data-ans-idx="${idx}" ` +
+          `data-answer="${escAttr(slug)}" data-frame-idx="${fi}"` +
+          `${hoverAttr}${clickAttr} ` +
           `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}">${inner}</div>`
         );
       })
       .join("");
 
+    emitInteractionCss(o, cls, cssRules, true);
+
+    // Wrapper: only keep data-anim-loop if present (hover/click now live on buttons)
+    let wrapExtra = "";
+    const wrapLoop = o.customAnimLoop
+      ? customAnimToLoopCfg(o.customAnimLoop)
+      : o.animLoop;
+    if (wrapLoop?.type && wrapLoop.type !== "none")
+      wrapExtra += ` data-anim-loop="${dataAttr(wrapLoop)}"`;
+
     return (
       `<div class="${cls}" data-role="other" ` +
-      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}">${buttons}</div>`
+      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${wrapExtra}>${buttons}</div>`
     );
   }
 
@@ -131,9 +274,10 @@ function buildObjectHtml(
     if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
     if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
     cssRules.push(`.${cls}{${rule}}`);
+    emitInteractionCss(o, cls, cssRules);
     return (
       `<div class="${cls}" data-role="${role}" ` +
-      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"></div>`
+      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${extraDataAttrs(o)}></div>`
     );
   }
 
@@ -155,9 +299,10 @@ function buildObjectHtml(
     if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
     if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
     cssRules.push(`.${cls}{${rule}}`);
+    emitInteractionCss(o, cls, cssRules);
     return (
       `<div class="${cls}" data-role="${role}" ` +
-      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"></div>`
+      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${extraDataAttrs(o)}></div>`
     );
   }
 
@@ -171,41 +316,49 @@ function buildObjectHtml(
     if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
     if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
     cssRules.push(`.${cls}{${rule}}`);
+    emitInteractionCss(o, cls, cssRules);
     return (
       `<img src="${escAttr(o.src ?? "")}" class="obj obj-img ${cls}" ` +
       `data-role="${role}" ` +
-      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}">`
+      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${extraDataAttrs(o)}>`
     );
   }
 
   //  text
+  const px = o.paddingX ?? (o.bgEnabled ? 14 : 0);
+  const py = o.paddingY ?? (o.bgEnabled ? 6 : 0);
   let rule =
-    `position:absolute;left:${o.x ?? 0}px;top:${o.y ?? 0}px;` +
+    `position:absolute;` +
+    `left:${o.x ?? 0}px;` +
+    `top:${o.y ?? 0}px;` +
+    (o.w != null ? `width:${o.w}px;` : `width:max-content;`) +
     `color:${o.color ?? "#fff"};font-size:${o.size ?? 22}px;` +
     `font-weight:${o.fontWeight ?? "700"};line-height:${o.lineHeight ?? 1.2};` +
     `white-space:pre-wrap;pointer-events:none;`;
-  if (o.textAlign) rule += `right:0;text-align:${o.textAlign};`;
+  if (o.textAlign) rule += `text-align:${o.textAlign};`;
   if (o.fontFamily) rule += `font-family:'${o.fontFamily}',sans-serif;`;
   if (o.letterSpacing) rule += `letter-spacing:${o.letterSpacing}px;`;
   if (o.italic) rule += "font-style:italic;";
   if (o.underline) rule += "text-decoration:underline;";
   if (o.bgEnabled && o.bgColor) {
-    rule += `background:${o.bgColor};border-radius:${o.radius ?? 8}px;padding:6px 14px;`;
+    rule += `background:${o.bgColor};border-radius:${o.radius ?? 8}px;padding:${py}px ${px}px;`;
   } else {
     rule += `text-shadow:0 1px 2px rgba(0,0,0,.6);`;
+    if (px || py) rule += `padding:${py}px ${px}px;`;
   }
   if (o.opacity != null && o.opacity < 100)
     rule += `opacity:${o.opacity / 100};`;
   if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
   if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
   cssRules.push(`.${cls}{${rule}}`);
+  emitInteractionCss(o, cls, cssRules);
 
   const ansIdx = role === "answer" ? ` data-ans-idx="${ansRef.v++}"` : "";
   const content = escText(o.text ?? "").replace(/\n/g, "<br>");
 
   return (
     `<div class="obj obj-txt ${cls}" data-role="${role}"${ansIdx} ` +
-    `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}">${content}</div>`
+    `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${extraDataAttrs(o)}>${content}</div>`
   );
 }
 
@@ -270,6 +423,35 @@ function buildParts(
     `@keyframes blsFlipOut{0%{transform:perspective(700px) rotateX(0deg);opacity:1}100%{transform:perspective(700px) rotateX(90deg);opacity:0}}`,
     `@keyframes blsSpinScaleOut{from{transform:rotate(0deg) scale(1);opacity:1}to{transform:rotate(200deg) scale(0);opacity:0}}`,
     `@keyframes blsRollOut{from{transform:translateX(0) rotate(0deg);opacity:1}to{transform:translateX(130%) rotate(130deg);opacity:0}}`,
+    // Background image animations
+    `@keyframes blsBgZoomIn{from{transform:scale(1.15)}to{transform:scale(1)}}`,
+    `@keyframes blsBgZoomOut{from{transform:scale(1)}to{transform:scale(1.15)}}`,
+    `@keyframes blsBgKenBurns{0%{transform:scale(1) translate(0,0)}100%{transform:scale(1.12) translate(-3%,-2%)}}`,
+    `@keyframes blsBgPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}`,
+    `@keyframes blsBgFadeIn{from{opacity:0}to{opacity:1}}`,
+
+    // ── Loop / Decoration keyframes ────────────────────────
+    `@keyframes blsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`,
+    `@keyframes blsPulseLoop{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}`,
+    `@keyframes blsBounceLoop{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}60%{transform:translateY(-4px)}}`,
+    `@keyframes blsShake{0%,100%{transform:translateX(0)}12%{transform:translateX(-6px)}25%{transform:translateX(6px)}37%{transform:translateX(-4px)}50%{transform:translateX(4px)}62%{transform:translateX(-2px)}75%{transform:translateX(2px)}}`,
+    `@keyframes blsSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`,
+    `@keyframes blsSwing{0%,100%{transform:rotate(0deg)}25%{transform:rotate(12deg)}75%{transform:rotate(-12deg)}}`,
+    `@keyframes blsRubberBand{0%,100%{transform:scaleX(1) scaleY(1)}30%{transform:scaleX(1.2) scaleY(0.8)}40%{transform:scaleX(0.85) scaleY(1.15)}50%{transform:scaleX(1.1) scaleY(0.9)}65%{transform:scaleX(0.96) scaleY(1.04)}75%{transform:scaleX(1.03) scaleY(0.97)}}`,
+    `@keyframes blsWobble{0%,100%{transform:translateX(0) rotate(0)}15%{transform:translateX(-10px) rotate(-4deg)}30%{transform:translateX(8px) rotate(3deg)}45%{transform:translateX(-6px) rotate(-2deg)}60%{transform:translateX(4px) rotate(1deg)}75%{transform:translateX(-2px) rotate(-0.5deg)}}`,
+    `@keyframes blsHeartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.15)}28%{transform:scale(1)}42%{transform:scale(1.12)}56%{transform:scale(1)}}`,
+    `@keyframes blsJello{0%,100%{transform:skewX(0) skewY(0)}22%{transform:skewX(-10deg) skewY(-3deg)}33%{transform:skewX(7deg) skewY(2deg)}44%{transform:skewX(-4deg) skewY(-1.5deg)}55%{transform:skewX(2deg) skewY(0.8deg)}66%{transform:skewX(-1deg) skewY(-0.4deg)}}`,
+    `@keyframes blsBreathing{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.04);opacity:0.85}}`,
+    `@keyframes blsPerspectiveIn{0%{transform:perspective(800px) rotateY(-90deg);opacity:0}60%{transform:perspective(800px) rotateY(12deg);opacity:1}80%{transform:perspective(800px) rotateY(-6deg)}100%{transform:perspective(800px) rotateY(0deg);opacity:1}}`,
+    `@keyframes blsPerspectiveTilt{0%,100%{transform:perspective(600px) rotateX(3deg) rotateY(2deg)}50%{transform:perspective(600px) rotateX(-3deg) rotateY(-2deg)}}`,
+
+    // ── Click / Active keyframes ───────────────────────────
+    `@keyframes clickPulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}`,
+    `@keyframes clickBounce{0%{transform:translateY(0)}30%{transform:translateY(-8px)}50%{transform:translateY(0)}70%{transform:translateY(-4px)}100%{transform:translateY(0)}}`,
+    `@keyframes clickShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}`,
+    `@keyframes clickPop{0%{transform:scale(1)}40%{transform:scale(0.9)}70%{transform:scale(1.1)}100%{transform:scale(1)}}`,
+    `@keyframes clickRipple{0%{box-shadow:0 0 0 0 rgba(255,255,255,0.4)}100%{box-shadow:0 0 0 18px rgba(255,255,255,0)}}`,
+    `@keyframes clickJelly{0%,100%{transform:scale(1,1)}30%{transform:scale(1.15,0.85)}40%{transform:scale(0.9,1.1)}50%{transform:scale(1.05,0.95)}65%{transform:scale(0.98,1.02)}80%{transform:scale(1.01,0.99)}}`,
   ];
 
   // Per-frame background CSS
@@ -291,10 +473,16 @@ function buildParts(
       const stagger = f.answerStagger ?? 80;
 
       let inner = "";
-      // Global background image goes INSIDE every frame, on top of frame bgColor,
-      // below frame.src and objects — exactly matching the canvas render order
-      if (quizData.bg)
-        inner += `<img src="${escAttr(quizData.bg)}" class="bg-global" alt="">`;
+      // Per-frame background image (falls back to legacy global quizData.bg)
+      const bgSrc = f.bgImage ?? quizData.bg;
+      if (bgSrc) {
+        const anim = f.bgImageAnim;
+        const animCss =
+          anim?.type && anim.type !== "none"
+            ? ` style="animation:${anim.type} ${anim.dur}ms ease-in-out infinite alternate"`
+            : "";
+        inner += `<img src="${escAttr(bgSrc)}" class="bg-global"${animCss} alt="">`;
+      }
       if (f.src) inner += `<img src="${escAttr(f.src)}" class="fbase">`;
 
       const ansRef: AnsIdxRef = { v: 0 };
@@ -316,26 +504,99 @@ function buildParts(
 
   const css = cssRules.join("\n");
 
-  // JS: all animation config read from data-attributes; DSP-standard clickTag
+  // JS: all animation config read from data-attributes
   const js = `(function(){
   var panels=Array.from(document.querySelectorAll('.fp'));
   var total=panels.length,cur=0,busy=false;
+  var answers=[];window.__blsAnswers=answers;
 
   function resetAnim(el){el.style.animation='none';void el.offsetWidth}
+
+  function buildAnimStr(cfg,delay){
+    if(!cfg.type||cfg.type==='none')return '';
+    var d=(cfg.delay||0)+(delay||0);
+    var iter=cfg.iterationCount||1;
+    if(iter==='infinite'||iter===0)iter='infinite';
+    var dir=cfg.direction||'normal';
+    var ease=cfg.easing||'ease-out';
+    var fill=cfg.fillMode||'both';
+    return cfg.type+' '+(cfg.dur||400)+'ms '+ease+' '+d+'ms '+iter+' '+dir+' '+fill;
+  }
+
+  function advanceFrame(){
+    if(busy||cur===total-1)return;
+    busy=true;
+    var ei=cur,ni=cur+1,ep=panels[ei],np=panels[ni];
+    ep.classList.remove('active');ep.classList.add('exiting');
+    np.classList.add('active');applyEnter(ni);
+    applyExit(ei,function(){ep.classList.remove('exiting');resetAnim(ep);ep.style.opacity='';cur=ni;busy=false;});
+  }
+
+  function applyLoopAnims(fi){
+    var p=panels[fi];if(!p)return;
+    p.querySelectorAll('[data-anim-loop]').forEach(function(el){
+      var lp=JSON.parse(el.getAttribute('data-anim-loop')||'{}');
+      if(!lp.type||lp.type==='none')return;
+      var delay=lp.delay||0;
+      var ease=lp.easing||'ease-in-out';
+      var iter=lp.iterationCount||'infinite';
+      var dir=lp.direction||'alternate';
+      var fill=lp.fillMode||'both';
+      setTimeout(function(){
+        el.style.animation=lp.type+' '+(lp.dur||1000)+'ms '+ease+' '+delay+'ms '+iter+' '+dir+' '+fill;
+      },delay);
+    });
+  }
+
+  function applyClickHandlers(fi){
+    var p=panels[fi];if(!p)return;
+    // Non-answer elements with data-click
+    p.querySelectorAll('[data-click]:not(.ans-btn)').forEach(function(el){
+      el.addEventListener('click',function(e){
+        e.stopPropagation();
+        var ct=el.getAttribute('data-click');
+        if(!ct||ct==='none')return;
+        el.style.animation='none';void el.offsetWidth;
+        el.style.animation=ct+' .35s ease';
+        el.addEventListener('animationend',function h(){el.style.animation='';el.removeEventListener('animationend',h);},{once:true});
+      });
+    });
+    // Answer buttons — per-button click anim + record answer + advance frame
+    p.querySelectorAll('.ans-btn[data-role="answer"]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        var slug=btn.getAttribute('data-answer')||'';
+        var frameIdx=Number(btn.getAttribute('data-frame-idx')||0);
+        var ansIdx=Number(btn.getAttribute('data-ans-idx')||0);
+        answers.push({frame:frameIdx,answer:slug,index:ansIdx,timestamp:Date.now()});
+        var ct=btn.getAttribute('data-click');
+        if(ct&&ct!=='none'){
+          btn.style.animation='none';void btn.offsetWidth;
+          btn.style.animation=ct+' .35s ease';
+          btn.addEventListener('animationend',function h(){btn.style.animation='';btn.removeEventListener('animationend',h);advanceFrame();},{once:true});
+        }else{
+          advanceFrame();
+        }
+      });
+    });
+  }
 
   function applyEnter(fi){
     var p=panels[fi];if(!p)return;
     var ae=JSON.parse(p.getAttribute('data-anim-enter')||'{"type":"none"}');
     var stagger=Number(p.getAttribute('data-stagger')||0);
     resetAnim(p);p.style.opacity='';
-    if(ae.type&&ae.type!=='none')p.style.animation=ae.type+' '+(ae.dur||400)+'ms ease-out both';
+    if(ae.type&&ae.type!=='none')p.style.animation=buildAnimStr(ae,0);
     p.querySelectorAll('[data-anim-in]').forEach(function(el){
       var ai=JSON.parse(el.getAttribute('data-anim-in')||'{}');
       if(!ai.type||ai.type==='none'){el.style.opacity='';el.style.animation='none';return;}
-      var delay=(ai.delay||0)+(el.getAttribute('data-role')==='answer'?Number(el.getAttribute('data-ans-idx')||0)*stagger:0);
+      var extra=(el.getAttribute('data-role')==='answer'?Number(el.getAttribute('data-ans-idx')||0)*stagger:0);
+      var delay=(ai.delay||0)+extra;
       el.style.opacity='0';el.style.animation='none';
-      (function(e,a,d,dl){setTimeout(function(){e.style.opacity='';e.style.animation=a+' '+d+'ms ease-out '+dl+'ms both';},dl);})(el,ai.type,ai.dur||400,delay);
+      (function(e,a,dl){setTimeout(function(){e.style.opacity='';e.style.animation=buildAnimStr(a,extra);if(e.getAttribute('data-hover')||e.getAttribute('data-click')){e.addEventListener('animationend',function h(){e.style.animation='';e.removeEventListener('animationend',h);},{once:true});}},dl);})(el,ai,delay);
     });
+    applyLoopAnims(fi);
+    applyClickHandlers(fi);
   }
 
   function applyExit(fi,cb){
@@ -343,31 +604,21 @@ function buildParts(
     var ax=JSON.parse(p.getAttribute('data-anim-exit')||'{"type":"none"}');
     var stagger=Number(p.getAttribute('data-stagger')||0);
     var maxDur=0;
-    if(ax.type&&ax.type!=='none'){var fd=ax.dur||300;maxDur=fd;resetAnim(p);p.style.animation=ax.type+' '+fd+'ms ease-in both';}
+    if(ax.type&&ax.type!=='none'){var fd=ax.dur||300;maxDur=fd;resetAnim(p);p.style.animation=buildAnimStr(ax,0);}
     p.querySelectorAll('[data-anim-out]').forEach(function(el){
       var ao=JSON.parse(el.getAttribute('data-anim-out')||'{}');
       if(!ao.type||ao.type==='none')return;
-      var delay=(ao.delay||0)+(el.getAttribute('data-role')==='answer'?Number(el.getAttribute('data-ans-idx')||0)*stagger:0);
+      var extra=(el.getAttribute('data-role')==='answer'?Number(el.getAttribute('data-ans-idx')||0)*stagger:0);
+      var delay=(ao.delay||0)+extra;
       var dur=ao.dur||300;maxDur=Math.max(maxDur,delay+dur);
-      el.style.animation=ao.type+' '+dur+'ms ease-in '+delay+'ms both';
+      el.style.animation=buildAnimStr(ao,extra);
     });
     if(maxDur<=0){cb();return;}
     setTimeout(cb,maxDur);
   }
 
   document.getElementById('ad').addEventListener('click',function(){
-    if(busy)return;busy=true;
-    if(cur===total-1){
-      /* DSP-standard clickTag: DV360/CM360/Xandr inject window.clickTag before ad loads */
-      var dest=window.clickTag||'';
-      if(!dest){var m=location.search.match(/[?&]clickTag=([^&]*)/);dest=m?decodeURIComponent(m[1]):'';}
-      if(!dest)dest='https://www.google.com';
-      window.open(dest,'_blank');busy=false;return;
-    }
-    var ei=cur,ni=cur+1,ep=panels[ei],np=panels[ni];
-    ep.classList.remove('active');ep.classList.add('exiting');
-    np.classList.add('active');applyEnter(ni);
-    applyExit(ei,function(){ep.classList.remove('exiting');resetAnim(ep);ep.style.opacity='';cur=ni;busy=false;});
+    advanceFrame();
   });
 
   panels[0].classList.add('active');

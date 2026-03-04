@@ -1,0 +1,24 @@
+font family and typograhy only for text but not for AnswerGroupFields
+
+no rtl direction
+
+no zoom in/out on canvas
+
+no ability to quick save
+
+label texts should be select-none
+
+clicking the text doesnt always display typograhy settings in app header
+
+no way to disable cursor lines
+
+no ability to close/open timeline (should create a window menu in app header similar to adobe to reveal/close timeline)
+
+no ability to close/open sidebar (should add an icon and a keyboard shorcut to open/close sidebar)
+
+should add more keyboard shorcuts
+    ex:
+        - save
+        - export
+        - new file
+templates should be editable 

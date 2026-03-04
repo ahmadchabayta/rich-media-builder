@@ -1,0 +1,232 @@
+bls-producer-next/
+├── eslint.config.mjs
+├── next.config.ts
+├── next-env.d.ts
+├── package.json
+├── postcss.config.mjs
+├── README.md
+├── sanity.cli.ts
+├── sanity.config.ts
+├── structure.tree
+├── tsconfig.json
+│
+├── public/                              # Static assets
+│
+├── app/
+│   ├── api/
+│   │   ├── cloud/
+│   │   │   ├── projects/
+│   │   │   │   ├── [id]/
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── save/
+│   │   │   │   └── route.ts
+│   │   │   └── upload-images/
+│   │   │       └── route.ts
+│   │   └── proxy-image/
+│   │       └── route.ts
+│   ├── studio/
+│   │   └── [[...tool]]/
+│   │       └── page.tsx
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+│
+├── components/
+│   ├── canvas/                          # Rendered ad board & objects
+│   │   ├── Board/
+│   │   │   ├── Board.tsx                # DnD sortable frame grid
+│   │   │   └── index.ts
+│   │   ├── BoardContextMenu/
+│   │   │   ├── BoardContextMenu.tsx     # Right-click menu on board bg
+│   │   │   └── index.ts
+│   │   ├── ContextMenu/
+│   │   │   ├── ContextMenu.tsx          # Right-click menu on objects
+│   │   │   └── index.ts
+│   │   ├── FrameCard/
+│   │   │   ├── FrameBackground.tsx      # Frame bg (color / image / anim)
+│   │   │   ├── FrameCard.tsx            # Sortable frame wrapper
+│   │   │   └── index.ts
+│   │   └── FrameObject/
+│   │       ├── FrameObject.tsx          # Main object renderer + drag/resize
+│   │       ├── FrameObjectRenderers.tsx # Delegate renderers (image/shape/…)
+│   │       ├── InlineTextEditor.tsx     # Double-click text editing
+│   │       ├── frameObjectUtils.ts      # resolveHover, buildCSSFilter, HANDLES
+│   │       └── index.ts
+│   │
+│   ├── layout/                          # Top-level shell panels
+│   │   ├── AppHeader/
+│   │   │   ├── AppHeader.tsx            # Header shell + modal state
+│   │   │   ├── AppHeaderMenuBar.tsx     # File/Edit/Insert/View menus
+│   │   │   ├── AlignDistributeBar.tsx   # Align & distribute toolbar
+│   │   │   ├── TextTypographyBar.tsx    # Font / size / style toolbar
+│   │   │   └── index.ts
+│   │   ├── BlsProducer/
+│   │   │   ├── BlsProducer.tsx          # Root layout (header / sidebar / board)
+│   │   │   ├── useKeyboardShortcuts.ts  # Global keyboard bindings
+│   │   │   └── index.ts
+│   │   ├── BottomPanel/
+│   │   │   ├── BottomPanel.tsx          # Timeline panel shell
+│   │   │   ├── TimelineTrack.tsx        # Per-object timeline row
+│   │   │   ├── usePlayback.ts           # Playback tick / scrub logic
+│   │   │   ├── timelineConstants.ts     # PX_PER_MS, TRACK_H, etc.
+│   │   │   └── index.ts
+│   │   ├── RightPanel/
+│   │   │   ├── RightPanel.tsx           # Right panel (props / layers tabs)
+│   │   │   ├── LayersTab.tsx            # Layers panel list
+│   │   │   └── index.ts
+│   │   └── Sidebar/
+│   │       ├── Sidebar.tsx              # Left sidebar shell
+│   │       └── index.ts
+│   │
+│   ├── modals/                          # Overlay dialogs
+│   │   ├── AdPreviewModal/
+│   │   │   ├── AdPreviewModal.tsx       # Fullscreen ad preview
+│   │   │   └── index.ts
+│   │   ├── AiPromptModal/
+│   │   │   ├── AiPromptModal.tsx        # AI prompt builder UI
+│   │   │   ├── promptBuilder.ts         # SIZE_PRESETS, STYLE_MOODS, buildPrompt()
+│   │   │   └── index.ts
+│   │   ├── CloudProjectsModal/
+│   │   │   ├── CloudProjectsModal.tsx   # Browse / load cloud projects
+│   │   │   ├── ProjectCard.tsx          # Single project card + status badges
+│   │   │   └── index.ts
+│   │   ├── ErrorBoundary/
+│   │   │   ├── ErrorBoundary.tsx        # React error boundary
+│   │   │   └── index.ts
+│   │   ├── KeyboardShortcutsModal/
+│   │   │   ├── KeyboardShortcutsModal.tsx  # Shortcuts reference
+│   │   │   └── index.ts
+│   │   ├── SaveToCloudModal/
+│   │   │   ├── SaveToCloudModal.tsx     # Save / update project metadata
+│   │   │   ├── cloudFormConstants.ts    # STATUS, FORMAT, PLATFORM options
+│   │   │   └── index.ts
+│   │   └── TemplateGallery/
+│   │       ├── TemplateGallery.tsx      # Template picker with category filter
+│   │       ├── TemplateCard.tsx         # Single template card
+│   │       ├── MiniPreview.tsx          # Thumbnail renderer
+│   │       └── index.ts
+│   │
+│   └── sidebar/                         # Right-panel property controls
+│       ├── utils.ts                     # Shared: n() number formatter, animBoxStyle
+│       ├── AnimPanel/
+│       │   ├── AnimPanel.tsx            # Enter / exit animation picker
+│       │   └── index.ts
+│       ├── AnswerGroupFields/
+│       │   ├── AnswerGroupFields.tsx    # Answer group object controls
+│       │   └── index.ts
+│       ├── BgFillSection/
+│       │   ├── BgFillSection.tsx        # Frame background color controls
+│       │   └── index.ts
+│       ├── BgImageSection/
+│       │   ├── BgImageSection.tsx       # Frame background image controls
+│       │   └── index.ts
+│       ├── ClickEffectPanel/
+│       │   ├── ClickEffectPanel.tsx     # Click animation picker
+│       │   └── index.ts
+│       ├── DividerObjectFields/
+│       │   ├── DividerObjectFields.tsx  # Divider line controls
+│       │   └── index.ts
+│       ├── EasingPicker/
+│       │   ├── EasingPicker.tsx         # CSS easing curve selector
+│       │   └── index.ts
+│       ├── FiltersBlendPanel/
+│       │   ├── FiltersBlendPanel.tsx    # CSS filters + blend-mode controls
+│       │   └── index.ts
+│       ├── FontFamilySelect/
+│       │   ├── FontFamilySelect.tsx     # Google font picker
+│       │   └── index.ts
+│       ├── FrameAnimPanel/
+│       │   ├── FrameAnimPanel.tsx       # Per-frame animation controls
+│       │   └── index.ts
+│       ├── FrameListSection/
+│       │   ├── FrameListSection.tsx     # Layers-panel frame list
+│       │   └── index.ts
+│       ├── FrameSizeSection/
+│       │   ├── FrameSizeSection.tsx     # Frame width / height inputs
+│       │   └── index.ts
+│       ├── HoverEffectPanel/
+│       │   ├── HoverEffectPanel.tsx     # Hover animation picker
+│       │   └── index.ts
+│       ├── ImageObjectFields/
+│       │   ├── ImageObjectFields.tsx    # Image object size controls
+│       │   └── index.ts
+│       ├── KeyframeEditor/
+│       │   ├── KeyframeEditor.tsx       # Custom @keyframes timeline editor
+│       │   ├── StopEditor.tsx           # Per-stop property rows
+│       │   ├── Diamond.tsx              # Timeline diamond marker
+│       │   └── index.ts
+│       ├── LoopAnimPanel/
+│       │   ├── LoopAnimPanel.tsx        # Loop animation picker
+│       │   └── index.ts
+│       ├── ObjectEditorSection/
+│       │   ├── ObjectEditorSection.tsx  # Top-level object property panel
+│       │   ├── AnimationSection.tsx     # Animation section shell
+│       │   ├── AnimPhaseBlock.tsx       # In / out / loop phase block
+│       │   ├── ObjectPalette.tsx        # Color / opacity / blend controls
+│       │   └── index.ts
+│       ├── ShapeObjectFields/
+│       │   ├── ShapeObjectFields.tsx    # Shape (rect/circle) controls
+│       │   └── index.ts
+│       └── TextObjectFields/
+│           ├── TextObjectFields.tsx     # Text object size/spacing controls
+│           └── index.ts
+│
+├── context/
+│   └── DragContext.ts                   # React context for drag state ref
+│
+├── hooks/
+│   ├── dragHandlers.ts                  # createMouseMoveHandler / createMouseUpHandler
+│   ├── dragTypes.ts                     # DragMode, ObjectDragState, DragState union
+│   ├── useDrag.ts                       # useDrag() — wires drag/resize + listeners
+│   ├── useExport.ts                     # Export to HTML/MP4/ZIP logic
+│   ├── useRuler.ts                      # Ruler tick / guide snap logic
+│   └── useSanityCloud.ts                # Sanity cloud CRUD (fetch / save / delete)
+│
+├── lib/
+│   ├── sanity/
+│   │   ├── schema/
+│   │   │   ├── adProject.ts             # Sanity adProject document schema
+│   │   │   └── campaign.ts              # Sanity campaign document schema
+│   │   ├── client.ts                    # Sanity client config
+│   │   ├── imageUtils.ts                # Image upload helpers
+│   │   └── queries.ts                   # GROQ query strings
+│   ├── templates/
+│   │   ├── quiz/
+│   │   │   └── cosmos.ts                # "Cosmos" quiz template definition
+│   │   └── _shared.ts                   # Shared template helpers
+│   ├── align.ts                         # Multi-select align & distribute
+│   ├── animCompiler.ts                  # Resolve anim configs to CSS strings
+│   ├── animPresets.ts                   # ANIM_IN / ANIM_OUT / ANIM_LOOP presets
+│   ├── exportEngine.ts                  # HTML/ZIP/video export engine
+│   ├── fonts.ts                         # ensureFont() — dynamic <link> injection
+│   ├── googleFontsList.ts               # Curated Google Fonts list
+│   ├── idbStorage.ts                    # IndexedDB persistence helpers
+│   ├── insertHelpers.ts                 # createDefaultText/Rect/Circle/Line/… factories
+│   ├── presetLibrary.ts                 # Built-in animation preset definitions
+│   ├── snapGuides.ts                    # Snap-to-object guide calculation
+│   ├── templates.ts                     # Template registry + applyTemplate()
+│   ├── theme.ts                         # Mantine theme config
+│   └── types.ts                         # All shared TypeScript interfaces & types
+│
+├── store/
+│   ├── slices/
+│   │   ├── clipboardSlice.ts            # Copy / paste object state
+│   │   ├── cloudSlice.ts                # Cloud save/load state
+│   │   ├── frameSlice.ts                # Frame CRUD actions
+│   │   ├── historySlice.ts              # Undo / redo stack
+│   │   ├── objectSlice.ts               # Object CRUD actions
+│   │   └── selectionSlice.ts            # Selected object(s) state
+│   ├── quizStore.ts                     # Zustand root store (composes slices)
+│   └── types.ts                         # Store state interface
+│
+└── sanity/                              # Sanity Studio config
+    ├── env.ts
+    ├── structure.ts
+    ├── lib/
+    │   ├── client.ts
+    │   ├── image.ts
+    │   └── live.ts
+    └── schemaTypes/
+        └── index.ts

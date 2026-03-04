@@ -1,7 +1,12 @@
 "use client";
 
-import BlsProducer from "@src/components/BlsProducer";
+import BlsProducer from "@src/components/layout/BlsProducer";
+import { ErrorBoundary } from "@src/components/modals/ErrorBoundary";
 
 export default function Home() {
-  return <BlsProducer />;
+  return (
+    <ErrorBoundary>
+      <BlsProducer />
+    </ErrorBoundary>
+  );
 }

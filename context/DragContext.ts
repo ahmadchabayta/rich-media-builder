@@ -10,6 +10,7 @@ export interface DragContextValue {
     e: React.MouseEvent,
     objId: string,
     frameIndex: number,
+    corner?: string,
   ) => void;
   startFrameResize: (e: React.MouseEvent, frameIndex: number) => void;
 }

@@ -94,6 +94,7 @@ async function collectAssets(quizData: QuizData): Promise<{
   if (clone.bg) clone.bg = await resolve(clone.bg);
 
   for (const frame of clone.frames) {
+    if (frame.bgImage) frame.bgImage = await resolve(frame.bgImage);
     if (frame.src) frame.src = await resolve(frame.src);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,7 +125,12 @@ export function useExport() {
 
   const exportQuiz = useCallback(async () => {
     if (quizData.frames.length < 2) {
-      alert("Please add at least 2 frames before exporting.");
+      notifications.show({
+        title: "Not enough frames",
+        message: "Please add at least 2 frames before exporting.",
+        color: "yellow",
+        autoClose: 4000,
+      });
       return;
     }
 

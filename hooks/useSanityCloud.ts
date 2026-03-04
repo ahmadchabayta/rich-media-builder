@@ -46,6 +46,8 @@ export function useSanityCloud() {
   const [projectsLoading, setProjectsLoading] = useState(false);
 
   const setCloudProjectId = useQuizStore((s) => s.setCloudProjectId);
+  const setCloudProjectTitle = useQuizStore((s) => s.setCloudProjectTitle);
+  const markSaved = useQuizStore((s) => s.markSaved);
 
   /** Save (or update) the current project to Sanity. */
   const saveToCloud = useCallback(
@@ -92,6 +94,8 @@ export function useSanityCloud() {
 
         const { id } = await res.json();
         setCloudProjectId(id);
+        setCloudProjectTitle(meta.title);
+        markSaved();
 
         notifications.update({
           id: notifId,
@@ -117,7 +121,7 @@ export function useSanityCloud() {
         setSaving(false);
       }
     },
-    [setCloudProjectId],
+    [setCloudProjectId, setCloudProjectTitle, markSaved],
   );
 
   /** Fetch the list of all cloud projects (overview only). */
@@ -150,6 +154,7 @@ export function useSanityCloud() {
       const snapshot = JSON.parse(doc.snapshotJson);
       useQuizStore.getState().loadProject(snapshot);
       useQuizStore.getState().setCloudProjectId(id);
+      useQuizStore.getState().setCloudProjectTitle(doc.title);
       notifications.show({
         title: "Project loaded ✅",
         message: `"${doc.title}" loaded from cloud.`,

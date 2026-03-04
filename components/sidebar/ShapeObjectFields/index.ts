@@ -1,0 +1,1 @@
+﻿export { ShapeObjectFields } from "./ShapeObjectFields";
