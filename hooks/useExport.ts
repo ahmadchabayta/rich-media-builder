@@ -17,7 +17,9 @@ async function srcToWebPBytes(src: string): Promise<Uint8Array> {
   let drawSrc = src;
 
   if (src.startsWith("http://") || src.startsWith("https://")) {
-    const resp = await fetch(src);
+    // Proxy through our API route to avoid CORS restrictions on external images
+    const proxied = `/api/proxy-image?url=${encodeURIComponent(src)}`;
+    const resp = await fetch(proxied);
     if (!resp.ok)
       throw new Error(`Fetch failed (${resp.status}): ${src.slice(0, 80)}`);
     const blob = await resp.blob();

@@ -1,4 +1,38 @@
 ﻿import type { QuizData } from "./types";
+import { FONT_LIST } from "./fonts";
+
+/** Collect unique Google Font families used across all text objects. */
+function collectGoogleFontLinks(quizData: QuizData): string {
+  const needed = new Map<string, string[]>(); // family → weights
+  for (const frame of quizData.frames) {
+    for (const obj of frame.objects) {
+      if (obj.type !== "text") continue;
+      const family = (obj as any).fontFamily as string | undefined;
+      if (!family) continue;
+
+      const def = FONT_LIST.find((f) => f.family === family);
+      if (def?.source === "system") continue; // system font, no link needed
+
+      // Google font (known or unknown — attempt to load it either way)
+      if (!needed.has(family)) {
+        needed.set(family, def?.weights ?? ["400", "700"]);
+      }
+    }
+  }
+  if (needed.size === 0) return "";
+  const links: string[] = [
+    `  <link rel="preconnect" href="https://fonts.googleapis.com">`,
+    `  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`,
+  ];
+  for (const [family, weights] of needed) {
+    const w = weights.join(";");
+    const encoded = encodeURIComponent(family).replace(/%20/g, "+");
+    links.push(
+      `  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${encoded}:wght@${w}&display=swap">`,
+    );
+  }
+  return links.join("\n");
+}
 
 export interface ExportFiles {
   html: string;
@@ -105,10 +139,21 @@ function buildObjectHtml(
 
   //  divider
   if (o.type === "divider") {
-    const rule =
+    const dt = o.thickness ?? 2;
+    const ls = o.lineStyle ?? "solid";
+    const dc = o.color ?? "#fff";
+    let rule =
       `position:absolute;left:${o.x ?? 0}px;top:${o.y ?? 0}px;` +
-      `width:${o.w}px;height:1px;` +
-      `border-top:${o.thickness ?? 2}px ${o.lineStyle ?? "solid"} ${o.color ?? "#fff"};`;
+      `width:${o.w}px;height:${dt}px;`;
+    if (ls === "solid") {
+      rule += `background:${dc};`;
+    } else {
+      rule += `border-top:${dt}px ${ls} ${dc};background:transparent;`;
+    }
+    if (o.opacity != null && o.opacity < 100)
+      rule += `opacity:${o.opacity / 100};`;
+    if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
+    if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
     cssRules.push(`.${cls}{${rule}}`);
     return (
       `<div class="${cls}" data-role="${role}" ` +
@@ -138,14 +183,16 @@ function buildObjectHtml(
     `position:absolute;left:${o.x ?? 0}px;top:${o.y ?? 0}px;` +
     `color:${o.color ?? "#fff"};font-size:${o.size ?? 22}px;` +
     `font-weight:${o.fontWeight ?? "700"};line-height:${o.lineHeight ?? 1.2};` +
-    `white-space:pre;pointer-events:none;`;
+    `white-space:pre-wrap;pointer-events:none;`;
   if (o.textAlign) rule += `right:0;text-align:${o.textAlign};`;
-  if (o.fontFamily) rule += `font-family:${o.fontFamily};`;
+  if (o.fontFamily) rule += `font-family:'${o.fontFamily}',sans-serif;`;
   if (o.letterSpacing) rule += `letter-spacing:${o.letterSpacing}px;`;
   if (o.italic) rule += "font-style:italic;";
   if (o.underline) rule += "text-decoration:underline;";
   if (o.bgEnabled && o.bgColor) {
     rule += `background:${o.bgColor};border-radius:${o.radius ?? 8}px;padding:6px 14px;`;
+  } else {
+    rule += `text-shadow:0 1px 2px rgba(0,0,0,.6);`;
   }
   if (o.opacity != null && o.opacity < 100)
     rule += `opacity:${o.opacity / 100};`;
@@ -168,7 +215,13 @@ function buildParts(
   quizData: QuizData,
   w: number,
   h: number,
-): { framesHtml: string; bgHtml: string; css: string; js: string } {
+): {
+  framesHtml: string;
+  bgHtml: string;
+  css: string;
+  js: string;
+  googleFontLinks: string;
+} {
   // Base CSS rules (no per-element styles yet)
   const cssRules: string[] = [
     `*,*::before,*::after{box-sizing:border-box}`,
@@ -321,7 +374,8 @@ function buildParts(
   applyEnter(0);
 })();`;
 
-  return { framesHtml, bgHtml, css, js };
+  const googleFontLinks = collectGoogleFontLinks(quizData);
+  return { framesHtml, bgHtml, css, js, googleFontLinks };
 }
 
 //  Public API
@@ -332,7 +386,7 @@ export function generateExportFiles(
   defaultW: number,
   defaultH: number,
 ): ExportFiles {
-  const { framesHtml, bgHtml, css, js } = buildParts(
+  const { framesHtml, bgHtml, css, js, googleFontLinks } = buildParts(
     quizData,
     defaultW,
     defaultH,
@@ -346,6 +400,7 @@ export function generateExportFiles(
     `  <meta name="viewport" content="width=device-width,initial-scale=1">\n` +
     `  <meta name="ad.size" content="width=${defaultW},height=${defaultH}">\n` +
     `  <title>Ad</title>\n` +
+    (googleFontLinks ? `${googleFontLinks}\n` : ``) +
     `  <link rel="stylesheet" href="ad.css">\n` +
     `</head>\n` +
     `<body>\n` +
@@ -367,7 +422,7 @@ export function generateExportHtml(
   defaultW: number,
   defaultH: number,
 ): string {
-  const { framesHtml, bgHtml, css, js } = buildParts(
+  const { framesHtml, bgHtml, css, js, googleFontLinks } = buildParts(
     quizData,
     defaultW,
     defaultH,
@@ -382,6 +437,7 @@ export function generateExportHtml(
     `  <meta name="viewport" content="width=device-width,initial-scale=1">\n` +
     `  <meta name="ad.size" content="width=${defaultW},height=${defaultH}">\n` +
     `  <title>Ad</title>\n` +
+    (googleFontLinks ? `${googleFontLinks}\n` : ``) +
     `  <style>\n${css}\n  </style>\n` +
     `</head>\n` +
     `<body>\n` +
