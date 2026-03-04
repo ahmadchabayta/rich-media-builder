@@ -43,6 +43,7 @@ const AGE_OPTIONS = [
   { title: "35–44", value: "35-44" },
   { title: "45–54", value: "45-54" },
   { title: "55+", value: "55+" },
+  { title: "18+", value: "18+" },
 ];
 
 export const adProject = defineType({
@@ -71,6 +72,16 @@ export const adProject = defineType({
       type: "image",
       group: "overview",
       options: { hotspot: true },
+    }),
+    defineField({
+      name: "previewImages",
+      title: "Ad Images",
+      type: "array",
+      of: [{ type: "image", options: { hotspot: false } }],
+      group: "overview",
+      readOnly: true,
+      description:
+        "Auto-populated when the project is saved — shows all images used in the ad.",
     }),
     defineField({
       name: "status",

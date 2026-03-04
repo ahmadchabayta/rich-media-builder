@@ -7,9 +7,12 @@
  *  - Swap data URIs for stable hash-based placeholder keys so the snapshot
  *    can be sent to the server without giant base64 strings
  *  - Leave existing Sanity CDN URLs untouched (no re-upload on re-save)
+ *  - resolveQuizImagesForExport: upload all images to Sanity and return
+ *    a QuizData clone with CDN URLs — used by the export engine
  */
 
 import type { ProjectSnapshot } from "@src/store/quizStore";
+import type { QuizData } from "@src/lib/types";
 
 const CDN_PREFIX = "https://cdn.sanity.io/";
 
@@ -135,4 +138,92 @@ function blobToBase64(blob: Blob): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+
+/**
+ * Walk every image field in QuizData, convert data URIs to WebP,
+ * upload to Sanity via /api/cloud/upload-images, and return a deep clone
+ * of QuizData with all data URIs replaced by Sanity CDN URLs.
+ *
+ * Already-CDN URLs are passed through untouched.
+ */
+export async function resolveQuizImagesForExport(
+  quizData: QuizData,
+): Promise<QuizData> {
+  const clone: QuizData = JSON.parse(JSON.stringify(quizData));
+
+  // Collect all unique data URIs
+  const uriToHash = new Map<string, string>();
+  const hashToB64 = new Map<string, string>();
+
+  async function collect(uri: string | null | undefined): Promise<void> {
+    if (!uri || isSanityCdn(uri) || !isDataUri(uri)) return;
+    if (uriToHash.has(uri)) return;
+    const hash = await sha256Hex(uri);
+    uriToHash.set(uri, hash);
+    if (!hashToB64.has(hash)) {
+      const blob = await toWebP(uri);
+      const b64 = await blobToBase64(blob);
+      hashToB64.set(hash, b64);
+    }
+  }
+
+  // Walk all image-bearing fields
+  await collect(clone.bg);
+  for (const frame of clone.frames) {
+    await collect(frame.src ?? null);
+    for (const obj of frame.objects) {
+      if (obj.type === "image")
+        await collect((obj as { src?: string }).src ?? null);
+      if (obj.type === "answerGroup") {
+        for (const ans of (obj as { answers: { src?: string }[] }).answers) {
+          await collect(ans.src ?? null);
+        }
+      }
+    }
+  }
+
+  if (hashToB64.size === 0) return clone; // nothing to upload
+
+  // Upload all images to Sanity in one request
+  const images: Record<string, string> = {};
+  for (const [hash, b64] of hashToB64) images[hash] = b64;
+
+  const res = await fetch("/api/cloud/upload-images", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ images }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? "Failed to upload images to Sanity");
+  }
+
+  const { urls } = (await res.json()) as { urls: Record<string, string> };
+
+  // Substitute CDN URLs back into the clone
+  function substitute(uri: string | null | undefined): string | undefined {
+    if (!uri || isSanityCdn(uri) || !isDataUri(uri)) return uri ?? undefined;
+    const hash = uriToHash.get(uri);
+    return hash ? (urls[hash] ?? uri) : uri;
+  }
+
+  if (clone.bg) clone.bg = substitute(clone.bg) ?? null;
+  for (const frame of clone.frames) {
+    if (frame.src) frame.src = substitute(frame.src) ?? null;
+    for (const obj of frame.objects) {
+      if (obj.type === "image") {
+        const io = obj as { src?: string };
+        if (io.src) io.src = substitute(io.src);
+      }
+      if (obj.type === "answerGroup") {
+        for (const ans of (obj as { answers: { src?: string }[] }).answers) {
+          if (ans.src) ans.src = substitute(ans.src);
+        }
+      }
+    }
+  }
+
+  return clone;
 }

@@ -56,7 +56,14 @@ export async function POST(req: NextRequest) {
       (_, hash: string) => hashToAsset[hash]?.url ?? "",
     );
 
-    // 3. Upsert the adProject document
+    // 3. Build previewImages from every uploaded asset (visible in Studio)
+    const previewImages = Object.values(hashToAsset).map((asset, i) => ({
+      _type: "image",
+      _key: `img-${i}`,
+      asset: { _type: "reference", _ref: asset._ref },
+    }));
+
+    // 4. Upsert the adProject document
     const docId = id ?? `adProject-${Date.now()}`;
     const parsedSnap: ProjectSnapshot = JSON.parse(snapshotStr);
 
@@ -68,6 +75,7 @@ export async function POST(req: NextRequest) {
       adSizeH: parsedSnap.defaultH,
       snapshotVersion: parsedSnap.version ?? 1,
       snapshotJson: snapshotStr,
+      ...(previewImages.length > 0 ? { previewImages } : {}),
     };
 
     const result = await client.createOrReplace(doc);

@@ -175,6 +175,7 @@ function buildParts(
     `body,html{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;font-family:sans-serif;background:#000}`,
     `#ad{width:100%;height:100%;position:relative;overflow:hidden;cursor:pointer}`,
     `.bg-layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}`,
+    `.bg-global{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}`,
     `.fp{position:absolute;inset:0;overflow:hidden;visibility:hidden;z-index:1;pointer-events:none}`,
     `.fp.active{visibility:visible;z-index:2;pointer-events:auto}`,
     `.fp.exiting{visibility:visible;z-index:3;pointer-events:none}`,
@@ -237,6 +238,10 @@ function buildParts(
       const stagger = f.answerStagger ?? 80;
 
       let inner = "";
+      // Global background image goes INSIDE every frame, on top of frame bgColor,
+      // below frame.src and objects — exactly matching the canvas render order
+      if (quizData.bg)
+        inner += `<img src="${escAttr(quizData.bg)}" class="bg-global" alt="">`;
       if (f.src) inner += `<img src="${escAttr(f.src)}" class="fbase">`;
 
       const ansRef: AnsIdxRef = { v: 0 };
@@ -253,9 +258,8 @@ function buildParts(
     })
     .join("\n    ");
 
-  const bgHtml = quizData.bg
-    ? `<img src="${escAttr(quizData.bg)}" class="bg-layer">`
-    : "";
+  // bgHtml is now empty — global bg is rendered inside each frame panel instead
+  const bgHtml = "";
 
   const css = cssRules.join("\n");
 

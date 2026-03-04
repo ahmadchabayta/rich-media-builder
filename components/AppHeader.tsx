@@ -109,7 +109,7 @@ function InsertTile({
 }
 
 export function AppHeader({ boardContainerRef }: Props) {
-  const { exportQuiz } = useExport();
+  const { exportQuiz, exporting } = useExport();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [insertOpen, setInsertOpen] = useState(false);
@@ -614,7 +614,10 @@ export function AppHeader({ boardContainerRef }: Props) {
 
       <Divider orientation="vertical" />
 
-      <Tooltip label={cloudProjectId ? "Update cloud project" : "Save to Sanity cloud"} withArrow>
+      <Tooltip
+        label={cloudProjectId ? "Update cloud project" : "Save to Sanity cloud"}
+        withArrow
+      >
         <Button
           onClick={() => setSaveCloudOpen(true)}
           variant="light"
@@ -657,12 +660,14 @@ export function AppHeader({ boardContainerRef }: Props) {
 
       <Button
         onClick={exportQuiz}
+        loading={exporting}
+        disabled={exporting}
         color="green"
         size="sm"
         leftSection={<IconDownload size={14} />}
         style={{ flexShrink: 0 }}
       >
-        Export Quiz Ad
+        {exporting ? "Exporting…" : "Export Quiz Ad"}
       </Button>
 
       {/* Templates modal */}
