@@ -115,9 +115,7 @@ export default function BlsProducer() {
         <AppShell.Header
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(15, 23, 42, 0.82)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
+            background: "var(--mantine-color-dark-8)",
           }}
         >
           <AppHeader boardContainerRef={boardContainerRef} />
