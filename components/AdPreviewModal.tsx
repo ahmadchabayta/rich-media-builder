@@ -24,26 +24,40 @@ interface Props {
 }
 
 export function AdPreviewModal({ opened, onClose }: Props) {
-  const quizData = useQuizStore((s) => s.quizData);
-  const defaultW = useQuizStore((s) => s.defaultW);
-  const defaultH = useQuizStore((s) => s.defaultH);
+  // Subscribe only to trigger re-runs — actual data read imperatively below
+  const _quizData = useQuizStore((s) => s.quizData);
+  const _defaultW = useQuizStore((s) => s.defaultW);
+  const _defaultH = useQuizStore((s) => s.defaultH);
+  const defaultW = _defaultW;
+  const defaultH = _defaultH;
+
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const blobUrlRef = useRef<string | null>(null);
-  const [key, setKey] = useState(0); // bump to reload iframe
+  // Use state for blob URL so the iframe src updates atomically (no stale-content flash)
+  const [blobUrl, setBlobUrl] = useState<string | undefined>(undefined);
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Build blob URL whenever content changes or modal opens
+  // Rebuild blob whenever modal opens or store content changes
   useEffect(() => {
-    if (!opened) return;
-    // Revoke previous blob
+    if (!opened) {
+      // Revoke and clear on close so reopening never flashes stale content
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      setBlobUrl(undefined);
+      return;
+    }
+    // Always read imperatively from the store for the freshest possible data
+    const { quizData, defaultW: dw, defaultH: dh } = useQuizStore.getState();
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-
-    const html = generateExportHtml(quizData, defaultW, defaultH);
+    const html = generateExportHtml(quizData, dw, dh);
     const blob = new Blob([html], { type: "text/html" });
-    blobUrlRef.current = URL.createObjectURL(blob);
-    setKey((k) => k + 1);
-  }, [opened, quizData, defaultW, defaultH]);
+    const url = URL.createObjectURL(blob);
+    blobUrlRef.current = url;
+    setBlobUrl(url);
+  }, [opened, _quizData, _defaultW, _defaultH]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -69,14 +83,21 @@ export function AdPreviewModal({ opened, onClose }: Props) {
   }, [opened, defaultW, defaultH]);
 
   const handleRestart = () => {
-    setKey((k) => k + 1);
+    // Re-generate a fresh blob from the latest store state
+    const { quizData, defaultW: dw, defaultH: dh } = useQuizStore.getState();
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    const html = generateExportHtml(quizData, dw, dh);
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    blobUrlRef.current = url;
+    setBlobUrl(url);
   };
 
   const handleOpenFullscreen = () => {
     if (blobUrlRef.current) window.open(blobUrlRef.current, "_blank");
   };
 
-  const totalFrames = quizData.frames.length;
+  const totalFrames = _quizData.frames.length;
   const hasContent = totalFrames > 0;
 
   return (
@@ -189,9 +210,8 @@ export function AdPreviewModal({ opened, onClose }: Props) {
             }}
           >
             <iframe
-              key={key}
               ref={iframeRef}
-              src={blobUrlRef.current ?? undefined}
+              src={blobUrl}
               style={{
                 width: defaultW,
                 height: defaultH,
