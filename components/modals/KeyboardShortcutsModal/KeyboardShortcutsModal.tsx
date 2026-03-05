@@ -22,6 +22,11 @@ const shortcuts = [
   { keys: ["Shift", "Drag"], action: "Resize object" },
   { keys: ["Ctrl", "Click"], action: "Multi-select" },
   { keys: ["Double-click"], action: "Inline-edit text" },
+  { keys: ["Ctrl", "S"], action: "Save to file" },
+  { keys: ["Ctrl", "E"], action: "Export" },
+  { keys: ["Ctrl", "N"], action: "New project" },
+  { keys: ["Ctrl", "B"], action: "Toggle sidebar" },
+  { keys: ["Ctrl", "Shift", "T"], action: "Toggle timeline" },
 ];
 
 export function KeyboardShortcutsModal({ opened, onClose }: Props) {

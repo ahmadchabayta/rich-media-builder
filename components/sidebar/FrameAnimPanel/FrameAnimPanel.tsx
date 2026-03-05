@@ -85,8 +85,26 @@ export function FrameAnimPanel({ frame, frameIndex }: Props) {
           min={0}
           onChange={(val) => upd({ answerStagger: n(val) })}
         />
+
+        <SimpleGrid cols={2} spacing="xs">
+          <NumberInput
+            label="Enter stagger (ms)"
+            description="Delay between each anim-order wave"
+            value={frame.enterStagger ?? 0}
+            min={0}
+            step={50}
+            onChange={(val) => upd({ enterStagger: n(val) })}
+          />
+          <NumberInput
+            label="Exit stagger (ms)"
+            description="Reversed wave order on exit"
+            value={frame.exitStagger ?? 0}
+            min={0}
+            step={50}
+            onChange={(val) => upd({ exitStagger: n(val) })}
+          />
+        </SimpleGrid>
       </Stack>
     </Box>
   );
 }
-

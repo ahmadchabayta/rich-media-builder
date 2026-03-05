@@ -15,6 +15,8 @@ export const ALL_PROJECTS_QUERY = `
     endDate,
     platforms,
     tags,
+    availableLocales,
+    "regions": audience.regions,
     "thumbnailUrl": thumbnail.asset->url,
     "campaignName": campaign->name
   }
@@ -39,6 +41,9 @@ export const PROJECT_BY_ID_QUERY = `
     notes,
     snapshotJson,
     snapshotVersion,
+    translationsJson,
+    availableLocales,
+    "regions": audience.regions,
     "thumbnailUrl": thumbnail.asset->url,
     "campaignName": campaign->name
   }

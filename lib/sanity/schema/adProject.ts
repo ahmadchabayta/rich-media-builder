@@ -236,6 +236,25 @@ export const adProject = defineType({
       readOnly: true,
       hidden: true, // hidden in Studio UI — managed by the producer app
     }),
+    defineField({
+      name: "translationsJson",
+      title: "Translations (JSON)",
+      type: "text",
+      group: "data",
+      readOnly: true,
+      description:
+        "Auto-populated on save. Serialised map of locale → objectId → translated text.",
+    }),
+    defineField({
+      name: "availableLocales",
+      title: "Available Locales",
+      type: "array",
+      of: [{ type: "string" }],
+      group: "data",
+      readOnly: true,
+      description: "Locales that have translations in this project.",
+      options: { layout: "tags" },
+    }),
   ],
   preview: {
     select: {

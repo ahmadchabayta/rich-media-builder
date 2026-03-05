@@ -28,8 +28,11 @@ export function createMouseMoveHandler(
       const frame = objStore.quizData.frames[ds.frameIndex];
       const obj = frame?.objects.find((o) => o.id === ds.objId);
       if (!obj) return;
-      const rawX = Math.round(ds.origX + (e.clientX - ds.startMouseX));
-      const rawY = Math.round(ds.origY + (e.clientY - ds.startMouseY));
+      // Zoom is a CSS scale() on the board; divide screen-pixel delta by it
+      // to get logical CSS pixel delta.
+      const zoom = objStore.zoom ?? 1;
+      const rawX = Math.round(ds.origX + (e.clientX - ds.startMouseX) / zoom);
+      const rawY = Math.round(ds.origY + (e.clientY - ds.startMouseY) / zoom);
 
       const el = boardContainerRef.current?.querySelector<HTMLElement>(
         `[data-obj-id="${ds.objId}"][data-fi="${ds.frameIndex}"]`,
@@ -86,8 +89,9 @@ export function createMouseMoveHandler(
       const frame = objStore.quizData.frames[ds.frameIndex];
       const obj = frame?.objects.find((o) => o.id === ds.objId);
       if (!obj) return;
-      const dx = e.clientX - ds.startMouseX;
-      const dy = e.clientY - ds.startMouseY;
+      const zoom = objStore.zoom ?? 1;
+      const dx = (e.clientX - ds.startMouseX) / zoom;
+      const dy = (e.clientY - ds.startMouseY) / zoom;
       const el = boardContainerRef.current?.querySelector<HTMLElement>(
         `[data-obj-id="${ds.objId}"][data-fi="${ds.frameIndex}"]`,
       );
@@ -187,13 +191,14 @@ export function createMouseMoveHandler(
         if (fromLeft) live.liveX = nx;
       }
     } else if (ds.mode === "resize") {
+      const zoom2 = useQuizStore.getState().zoom ?? 1;
       const w = Math.max(
         80,
-        Math.round(ds.origW + (e.clientX - ds.startMouseX)),
+        Math.round(ds.origW + (e.clientX - ds.startMouseX) / zoom2),
       );
       const h = Math.max(
         80,
-        Math.round(ds.origH + (e.clientY - ds.startMouseY)),
+        Math.round(ds.origH + (e.clientY - ds.startMouseY) / zoom2),
       );
       const card = boardContainerRef.current?.querySelector<HTMLElement>(
         `[data-card-index="${ds.frameIndex}"]`,

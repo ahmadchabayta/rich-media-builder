@@ -1,4 +1,11 @@
-﻿import { Stack, Text, NumberInput, Checkbox, SimpleGrid } from "@mantine/core";
+﻿import {
+  Stack,
+  Text,
+  NumberInput,
+  Checkbox,
+  SimpleGrid,
+  SegmentedControl,
+} from "@mantine/core";
 import type { TextObject, FrameObject } from "@src/lib/types";
 import { n } from "../utils";
 
@@ -27,22 +34,8 @@ export function TextObjectFields({ obj, updateObj }: Props) {
         />
       </SimpleGrid>
 
-      {/* Width + Padding */}
-      <SimpleGrid cols={3} spacing="xs">
-        <NumberInput
-          label="Width"
-          placeholder="auto"
-          value={obj.w ?? ""}
-          min={20}
-          onChange={(val) =>
-            updateObj({
-              w:
-                val === ""
-                  ? undefined
-                  : Math.max(20, n(val as number | string, 20)),
-            } as Partial<FrameObject>)
-          }
-        />
+      {/* Padding */}
+      <SimpleGrid cols={2} spacing="xs">
         <NumberInput
           label="Pad X"
           placeholder="px"
@@ -66,6 +59,18 @@ export function TextObjectFields({ obj, updateObj }: Props) {
           }
         />
       </SimpleGrid>
+
+      {/* Text direction */}
+      <SegmentedControl
+        size="xs"
+        fullWidth
+        value={obj.direction ?? "ltr"}
+        onChange={(v) => updateObj({ direction: v as "ltr" | "rtl" })}
+        data={[
+          { value: "ltr", label: "LTR" },
+          { value: "rtl", label: "RTL" },
+        ]}
+      />
 
       {/* Text content */}
       <Text size="xs" c="dimmed" fw={600}>
@@ -93,4 +98,3 @@ export function TextObjectFields({ obj, updateObj }: Props) {
     </Stack>
   );
 }
-

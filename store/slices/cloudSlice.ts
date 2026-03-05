@@ -1,10 +1,29 @@
-import type { SliceSet, SliceGet, ProjectSnapshot } from "../types";
+import type {
+  SliceSet,
+  SliceGet,
+  ProjectSnapshot,
+  ExportMeta,
+  AssetItem,
+} from "../types";
+
+const DEFAULT_EXPORT_META: ExportMeta = {
+  clientName: "",
+  adName: "",
+  adKind: "bls",
+  countries: [{ code: "ksa", languages: ["en"] }],
+};
 
 export const cloudSlice = (set: SliceSet, _get: SliceGet) => ({
   // ── State ────────────────────────────────────────────────────────────────────
   cloudProjectId: null as string | null,
   cloudProjectTitle: null as string | null,
+  cloudProjectClient: null as string | null,
+  cloudProjectLocales: [] as string[],
+  cloudProjectRegions: [] as string[],
   lastSavedAt: null as number | null,
+  exportMeta: { ...DEFAULT_EXPORT_META } as ExportMeta,
+  customCss: "" as string,
+  assets: [] as AssetItem[],
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
@@ -13,7 +32,26 @@ export const cloudSlice = (set: SliceSet, _get: SliceGet) => ({
   setCloudProjectTitle: (title: string | null) =>
     set({ cloudProjectTitle: title }),
 
+  setCloudProjectClient: (client: string | null) =>
+    set({ cloudProjectClient: client }),
+
+  setCloudProjectLocales: (locales: string[]) =>
+    set({ cloudProjectLocales: locales }),
+
+  setCloudProjectRegions: (regions: string[]) =>
+    set({ cloudProjectRegions: regions }),
+
   markSaved: () => set({ isDirty: false, lastSavedAt: Date.now() }),
+
+  setExportMeta: (meta: Partial<ExportMeta>) =>
+    set((s) => ({ exportMeta: { ...s.exportMeta, ...meta } })),
+
+  setCustomCss: (css: string) => set({ customCss: css }),
+
+  addAsset: (item: AssetItem) => set((s) => ({ assets: [...s.assets, item] })),
+
+  removeAsset: (id: string) =>
+    set((s) => ({ assets: s.assets.filter((a) => a.id !== id) })),
 
   loadProject: (data: ProjectSnapshot) =>
     set({
@@ -35,5 +73,8 @@ export const cloudSlice = (set: SliceSet, _get: SliceGet) => ({
       isDirty: false,
       lastSavedAt: null,
       cloudProjectTitle: null,
+      cloudProjectClient: null,
+      cloudProjectLocales: [],
+      cloudProjectRegions: [],
     }),
 });

@@ -54,7 +54,9 @@ export function FrameBackground({
                   inset: 0,
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: (frame.bgImageSize ??
+                    "cover") as React.CSSProperties["objectFit"],
+                  objectPosition: `${frame.bgImagePosX ?? 50}% ${frame.bgImagePosY ?? 50}%`,
                   pointerEvents: "none",
                   ...animStyle,
                 }}
@@ -105,7 +107,7 @@ export function FrameBackground({
           }}
           alt=""
         />
-      ) : (
+      ) : frame.objects.length === 0 ? (
         <div
           style={{
             position: "absolute",
@@ -122,7 +124,7 @@ export function FrameBackground({
             frame
           </span>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

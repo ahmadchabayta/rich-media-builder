@@ -8,6 +8,7 @@ interface Props {
   children: React.ReactNode;
   showRuler?: boolean;
   showGrid?: boolean;
+  showCursorLines?: boolean;
 }
 
 export function RuledCanvas({
@@ -16,16 +17,19 @@ export function RuledCanvas({
   children,
   showRuler = true,
   showGrid = false,
+  showCursorLines = true,
 }: Props) {
   const hRulerRef = useRef<HTMLCanvasElement>(null);
   const vRulerRef = useRef<HTMLCanvasElement>(null);
+  const rulerSize = showRuler ? 18 : 0;
+
   const {
     vLineRef,
     hLineRef,
     cornerRef,
     handleCanvasMouseMove,
     handleCanvasMouseLeave,
-  } = useRuler();
+  } = useRuler(rulerSize);
 
   useEffect(() => {
     if (!showRuler) return;
@@ -34,8 +38,6 @@ export function RuledCanvas({
     if (vRulerRef.current && frame.h > 0)
       drawVRuler(vRulerRef.current, frame.h);
   }, [frame.w, frame.h, showRuler]);
-
-  const rulerSize = showRuler ? 18 : 0;
 
   return (
     <div
@@ -100,34 +102,38 @@ export function RuledCanvas({
       </div>
 
       {/* Vertical crosshair line */}
-      <div
-        ref={vLineRef}
-        style={{
-          display: "none",
-          position: "absolute",
-          top: 0,
-          width: 1,
-          background: "rgba(56,189,248,.8)",
-          pointerEvents: "none",
-          height: frame.h + 18,
-          zIndex: 6,
-        }}
-      />
+      {showCursorLines && (
+        <div
+          ref={vLineRef}
+          style={{
+            display: "none",
+            position: "absolute",
+            top: 0,
+            width: 1,
+            background: "rgba(56,189,248,.8)",
+            pointerEvents: "none",
+            height: frame.h + 18,
+            zIndex: 6,
+          }}
+        />
+      )}
 
       {/* Horizontal crosshair line */}
-      <div
-        ref={hLineRef}
-        style={{
-          display: "none",
-          position: "absolute",
-          left: 0,
-          height: 1,
-          background: "rgba(56,189,248,.8)",
-          pointerEvents: "none",
-          width: frame.w + 18,
-          zIndex: 6,
-        }}
-      />
+      {showCursorLines && (
+        <div
+          ref={hLineRef}
+          style={{
+            display: "none",
+            position: "absolute",
+            left: 0,
+            height: 1,
+            background: "rgba(56,189,248,.8)",
+            pointerEvents: "none",
+            width: frame.w + 18,
+            zIndex: 6,
+          }}
+        />
+      )}
     </div>
   );
 }

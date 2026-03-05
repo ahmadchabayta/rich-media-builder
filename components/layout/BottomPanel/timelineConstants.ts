@@ -21,8 +21,24 @@ export const INACTIVE_BORDER = "var(--mantine-color-dark-4)";
 
 export function getTimings(frames: Frame[], holdMs: number): FrameTiming[] {
   return frames.map((f) => {
-    const enterDur = f.animEnter?.dur ?? 400;
-    const exitDur = f.animExit?.dur ?? 300;
+    const maxCustomEnter = f.objects.reduce(
+      (m, o) => Math.max(m, o.customAnimIn?.dur ?? 0),
+      0,
+    );
+    const maxCustomExit = f.objects.reduce(
+      (m, o) => Math.max(m, o.customAnimOut?.dur ?? 0),
+      0,
+    );
+    const enterStagger = f.enterStagger ?? 0;
+    const exitStagger = f.exitStagger ?? 0;
+    // Number of distinct animOrder waves (max wave index = waveCount - 1)
+    const waveCount = new Set(f.objects.map((o) => o.animOrder ?? 0)).size;
+    const staggerEnterOffset = Math.max(0, waveCount - 1) * enterStagger;
+    const staggerExitOffset = Math.max(0, waveCount - 1) * exitStagger;
+    const enterDur =
+      Math.max(f.animEnter?.dur ?? 400, maxCustomEnter) + staggerEnterOffset;
+    const exitDur =
+      Math.max(f.animExit?.dur ?? 300, maxCustomExit) + staggerExitOffset;
     return {
       enterDur,
       holdDur: holdMs,

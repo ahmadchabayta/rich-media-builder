@@ -178,6 +178,16 @@ export function ProjectCard({
           </Group>
         )}
 
+        {project.availableLocales && project.availableLocales.length > 0 && (
+          <Group gap={3}>
+            {project.availableLocales.map((lc) => (
+              <Badge key={lc} size="xs" variant="light" color="teal">
+                {lc.toUpperCase()}
+              </Badge>
+            ))}
+          </Group>
+        )}
+
         <Text size="xs" c="dimmed">
           Updated {dayjs(project._updatedAt).fromNow()}
         </Text>

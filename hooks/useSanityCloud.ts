@@ -16,6 +16,7 @@ export interface CloudProjectMeta {
   endDate?: string;
   platforms?: string[];
   tags?: string[];
+  availableLocales?: string[];
   thumbnailUrl?: string;
   campaignName?: string;
 }
@@ -47,6 +48,9 @@ export function useSanityCloud() {
 
   const setCloudProjectId = useQuizStore((s) => s.setCloudProjectId);
   const setCloudProjectTitle = useQuizStore((s) => s.setCloudProjectTitle);
+  const setCloudProjectClient = useQuizStore((s) => s.setCloudProjectClient);
+  const setCloudProjectLocales = useQuizStore((s) => s.setCloudProjectLocales);
+  const setCloudProjectRegions = useQuizStore((s) => s.setCloudProjectRegions);
   const markSaved = useQuizStore((s) => s.markSaved);
 
   /** Save (or update) the current project to Sanity. */
@@ -95,6 +99,9 @@ export function useSanityCloud() {
         const { id } = await res.json();
         setCloudProjectId(id);
         setCloudProjectTitle(meta.title);
+        setCloudProjectClient(meta.client ?? null);
+        setCloudProjectLocales([]);
+        setCloudProjectRegions([]);
         markSaved();
 
         notifications.update({
@@ -121,7 +128,14 @@ export function useSanityCloud() {
         setSaving(false);
       }
     },
-    [setCloudProjectId, setCloudProjectTitle, markSaved],
+    [
+      setCloudProjectId,
+      setCloudProjectTitle,
+      setCloudProjectClient,
+      setCloudProjectLocales,
+      setCloudProjectRegions,
+      markSaved,
+    ],
   );
 
   /** Fetch the list of all cloud projects (overview only). */
@@ -155,6 +169,11 @@ export function useSanityCloud() {
       useQuizStore.getState().loadProject(snapshot);
       useQuizStore.getState().setCloudProjectId(id);
       useQuizStore.getState().setCloudProjectTitle(doc.title);
+      useQuizStore.getState().setCloudProjectClient(doc.client ?? null);
+      useQuizStore
+        .getState()
+        .setCloudProjectLocales(doc.availableLocales ?? []);
+      useQuizStore.getState().setCloudProjectRegions(doc.regions ?? []);
       notifications.show({
         title: "Project loaded ✅",
         message: `"${doc.title}" loaded from cloud.`,

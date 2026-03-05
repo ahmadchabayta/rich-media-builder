@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Stack, Text, Group, Badge, Button } from "@mantine/core";
-import { IconCheck } from "@tabler/icons-react";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import type { Template } from "@src/lib/templates";
 
 import { MiniPreview } from "./MiniPreview";
@@ -10,9 +10,11 @@ import { MiniPreview } from "./MiniPreview";
 export function TemplateCard({
   tpl,
   onUse,
+  onDuplicate,
 }: {
   tpl: Template;
   onUse: (tpl: Template) => void;
+  onDuplicate: (tpl: Template) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const accent = tpl.accentColor;
@@ -80,23 +82,34 @@ export function TemplateCard({
         </Group>
       </Stack>
 
-      {/* Use button */}
-      <Button
-        size="xs"
-        fullWidth
-        variant={hovered ? "filled" : "light"}
-        color="gray"
-        leftSection={<IconCheck size={12} />}
-        onClick={() => onUse(tpl)}
-        style={{
-          background: hovered ? accent : undefined,
-          borderColor: hovered ? accent : undefined,
-          color: hovered ? "#fff" : undefined,
-          transition: "all 150ms ease",
-        }}
-      >
-        Use Template
-      </Button>
+      {/* Action buttons */}
+      <Group gap={6} grow>
+        <Button
+          size="xs"
+          variant={hovered ? "filled" : "light"}
+          color="gray"
+          leftSection={<IconCheck size={12} />}
+          onClick={() => onUse(tpl)}
+          style={{
+            background: hovered ? accent : undefined,
+            borderColor: hovered ? accent : undefined,
+            color: hovered ? "#fff" : undefined,
+            transition: "all 150ms ease",
+          }}
+        >
+          Use
+        </Button>
+        <Button
+          size="xs"
+          variant="light"
+          color="gray"
+          leftSection={<IconCopy size={12} />}
+          onClick={() => onDuplicate(tpl)}
+          style={{ transition: "all 150ms ease" }}
+        >
+          Duplicate
+        </Button>
+      </Group>
     </Stack>
   );
 }

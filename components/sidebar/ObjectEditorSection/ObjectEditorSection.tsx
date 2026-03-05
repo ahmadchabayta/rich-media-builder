@@ -13,7 +13,7 @@ import {
   ActionIcon,
   Divider,
 } from "@mantine/core";
-import { IconCopy, IconTrash } from "@tabler/icons-react";
+import { IconCopy, IconTrash, IconCopyPlus } from "@tabler/icons-react";
 import type {
   FrameObject,
   ImageObject,
@@ -269,6 +269,21 @@ export function ObjectEditorSection() {
                   <IconCopy size={12} />
                 </ActionIcon>
               </Tooltip>
+              <Tooltip label="Copy to all frames" withArrow>
+                <ActionIcon
+                  size="sm"
+                  variant="default"
+                  onClick={() => {
+                    if (selectedObjectId)
+                      store.copyObjectToAllFrames(
+                        currentPreviewIndex,
+                        selectedObjectId,
+                      );
+                  }}
+                >
+                  <IconCopyPlus size={12} />
+                </ActionIcon>
+              </Tooltip>
               <Tooltip label="Remove object" withArrow>
                 <ActionIcon
                   size="sm"
@@ -302,6 +317,45 @@ export function ObjectEditorSection() {
                   value={selectedObj.y ?? 0}
                   onChange={(val) => updateObj({ y: n(val) })}
                 />
+              </SimpleGrid>
+              {/* W / H – shown for all object types that expose these fields */}
+              <SimpleGrid cols={2} spacing="xs">
+                {(selectedObj.type === "shape" ||
+                  selectedObj.type === "image" ||
+                  selectedObj.type === "divider" ||
+                  selectedObj.type === "answerGroup" ||
+                  selectedObj.type === "text") && (
+                  <NumberInput
+                    label="W"
+                    value={(selectedObj as any).w ?? ""}
+                    min={1}
+                    placeholder={
+                      selectedObj.type === "text" ? "auto" : undefined
+                    }
+                    onChange={(val) => {
+                      if (selectedObj.type === "text" && val === "") {
+                        updateObj({ w: undefined } as Partial<FrameObject>);
+                      } else {
+                        updateObj({
+                          w: Math.max(1, n(val as number | string, 1)),
+                        } as Partial<FrameObject>);
+                      }
+                    }}
+                  />
+                )}
+                {(selectedObj.type === "shape" ||
+                  selectedObj.type === "image") && (
+                  <NumberInput
+                    label="H"
+                    value={(selectedObj as any).h ?? 0}
+                    min={1}
+                    onChange={(val) =>
+                      updateObj({
+                        h: Math.max(1, n(val as number | string, 1)),
+                      } as Partial<FrameObject>)
+                    }
+                  />
+                )}
               </SimpleGrid>
               <SimpleGrid cols={2} spacing="xs">
                 <NumberInput

@@ -67,6 +67,14 @@ export async function POST(req: NextRequest) {
     const docId = id ?? `adProject-${Date.now()}`;
     const parsedSnap: ProjectSnapshot = JSON.parse(snapshotStr);
 
+    // 5. Extract translations for dedicated queryable fields
+    const translationsMap = parsedSnap.quizData?.translations ?? {};
+    const availableLocales = Object.keys(translationsMap).filter(
+      (lc) => lc !== "__init__",
+    );
+    const translationsJson =
+      availableLocales.length > 0 ? JSON.stringify(translationsMap) : undefined;
+
     const doc = {
       _type: "adProject",
       _id: docId,
@@ -76,6 +84,8 @@ export async function POST(req: NextRequest) {
       snapshotVersion: parsedSnap.version ?? 1,
       snapshotJson: snapshotStr,
       ...(previewImages.length > 0 ? { previewImages } : {}),
+      translationsJson: translationsJson ?? "",
+      availableLocales,
     };
 
     const result = await client.createOrReplace(doc);

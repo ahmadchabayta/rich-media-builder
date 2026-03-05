@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Stack, Group, Text, SegmentedControl } from "@mantine/core";
+import { Stack, Group, Text, SegmentedControl, Select } from "@mantine/core";
 import { ANIM_IN, ANIM_OUT } from "@src/lib/animPresets";
 import type { AnimConfig, LoopAnimConfig, CustomAnim } from "@src/lib/types";
 import { AnimPanel } from "@src/components/sidebar/AnimPanel";
@@ -111,6 +111,24 @@ export function AnimPhaseBlock({
           <EasingPicker
             value={customValue.easing ?? "ease"}
             onChange={(easing) => onCustomChange({ ...customValue, easing })}
+          />
+          <Select
+            size="xs"
+            label="Fill Mode"
+            data={[
+              { value: "none", label: "None" },
+              { value: "forwards", label: "Forwards" },
+              { value: "backwards", label: "Backwards" },
+              { value: "both", label: "Both" },
+            ]}
+            value={customValue.fillMode ?? "both"}
+            onChange={(v) =>
+              onCustomChange({
+                ...customValue,
+                fillMode: (v ?? "both") as CustomAnim["fillMode"],
+              })
+            }
+            allowDeselect={false}
           />
           <KeyframeEditor
             anim={customValue}

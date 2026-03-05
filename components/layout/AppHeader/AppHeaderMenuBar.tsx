@@ -11,12 +11,7 @@ import { notifications } from "@mantine/notifications";
 import {
   IconDeviceFloppy,
   IconFolderOpen,
-  IconTypography,
   IconPhoto,
-  IconSquare,
-  IconCircle,
-  IconMinus,
-  IconLayoutList,
   IconTemplate,
   IconCloudUpload,
   IconCloudDownload,
@@ -27,17 +22,14 @@ import {
   IconMagnet,
   IconSparkles,
   IconKeyboard,
+  IconDownload,
+  IconRuler,
+  IconGrid3x3,
+  IconTimeline,
+  IconLanguage,
 } from "@tabler/icons-react";
+import { useExport } from "@src/hooks/useExport";
 import { useQuizStore, type ProjectSnapshot } from "@src/store/quizStore";
-import type { FrameObject } from "@src/lib/types";
-import {
-  createDefaultText,
-  createDefaultRect,
-  createDefaultCircle,
-  createDefaultLine,
-  createDefaultAnswers,
-  createImageFromFile,
-} from "@src/lib/insertHelpers";
 
 interface AppHeaderMenuBarProps {
   setTemplatesOpen: (v: boolean) => void;
@@ -46,6 +38,9 @@ interface AppHeaderMenuBarProps {
   setPreviewOpen: (v: boolean) => void;
   setAiPromptOpen: (v: boolean) => void;
   setShortcutsOpen: (v: boolean) => void;
+  setExportSettingsOpen: (v: boolean) => void;
+  setAssetBucketOpen: (v: boolean) => void;
+  setTranslationOpen: (v: boolean) => void;
 }
 
 const mbLabel = (label: string) => (
@@ -78,20 +73,28 @@ export function AppHeaderMenuBar({
   setPreviewOpen,
   setAiPromptOpen,
   setShortcutsOpen,
+  setExportSettingsOpen,
+  setAssetBucketOpen,
+  setTranslationOpen,
 }: AppHeaderMenuBarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const [pasteJsonOpen, setPasteJsonOpen] = useState(false);
   const [pasteJsonValue, setPasteJsonValue] = useState("");
+  const { exportQuiz, exporting } = useExport();
 
   const cloudProjectId = useQuizStore((s) => s.cloudProjectId);
   const snapEnabled = useQuizStore((s) => s.snapEnabled);
   const setSnapEnabled = useQuizStore((s) => s.setSnapEnabled);
+  const showRuler = useQuizStore((s) => s.showRuler);
+  const setShowRuler = useQuizStore((s) => s.setShowRuler);
+  const showGrid = useQuizStore((s) => s.showGrid);
+  const setShowGrid = useQuizStore((s) => s.setShowGrid);
+  const showCursorLines = useQuizStore((s) => s.showCursorLines);
+  const setShowCursorLines = useQuizStore((s) => s.setShowCursorLines);
+  const timelineOpen = useQuizStore((s) => s.timelineOpen);
+  const setTimelineOpen = useQuizStore((s) => s.setTimelineOpen);
   const loadProject = useQuizStore((s) => s.loadProject);
   const markSaved = useQuizStore((s) => s.markSaved);
-  const getActiveFrame = useQuizStore((s) => s.getActiveFrame);
-  const addObject = useQuizStore((s) => s.addObject);
-  const currentPreviewIndex = useQuizStore((s) => s.currentPreviewIndex);
 
   const handleNewProject = () => {
     if (
@@ -187,24 +190,6 @@ export function AppHeaderMenuBar({
     e.target.value = "";
   };
 
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const frame = getActiveFrame();
-    if (!file || !frame) return;
-    createImageFromFile(file, frame, (obj) =>
-      addObject(currentPreviewIndex, obj),
-    );
-    e.target.value = "";
-  };
-
-  const addInsert = (
-    factory: (frame: { w: number; h: number }) => FrameObject,
-  ) => {
-    const frame = getActiveFrame();
-    if (!frame) return;
-    addObject(currentPreviewIndex, factory(frame));
-  };
-
   return (
     <>
       <Group gap={0} wrap="nowrap" style={{ flexShrink: 0 }}>
@@ -250,6 +235,14 @@ export function AppHeaderMenuBar({
             >
               Open from Cloud…
             </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item
+              leftSection={<IconDownload size={14} color="#4ade80" />}
+              onClick={() => setExportSettingsOpen(true)}
+              disabled={exporting}
+            >
+              {exporting ? "Exporting…" : "Export…"}
+            </Menu.Item>
           </Menu.Dropdown>
         </Menu>
 
@@ -258,54 +251,22 @@ export function AppHeaderMenuBar({
           <Menu.Target>{mbLabel("Insert")}</Menu.Target>
           <Menu.Dropdown>
             <Menu.Item
-              leftSection={<IconTypography size={14} color="#60a5fa" />}
-              onClick={() => {
-                const f = getActiveFrame();
-                if (f)
-                  addObject(
-                    currentPreviewIndex,
-                    createDefaultText(f.objects.length),
-                  );
-              }}
-            >
-              Text
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconPhoto size={14} color="#a78bfa" />}
-              onClick={() => imageInputRef.current?.click()}
-            >
-              Image
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconSquare size={14} color="#22d3ee" />}
-              onClick={() => addInsert(createDefaultRect)}
-            >
-              Rectangle
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconCircle size={14} color="#f472b6" />}
-              onClick={() => addInsert(createDefaultCircle)}
-            >
-              Circle
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconMinus size={14} color="#94a3b8" />}
-              onClick={() => addInsert(createDefaultLine)}
-            >
-              Line
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconLayoutList size={14} color="#34d399" />}
-              onClick={() => addInsert(createDefaultAnswers)}
-            >
-              Answer Buttons
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item
               leftSection={<IconTemplate size={14} />}
               onClick={() => setTemplatesOpen(true)}
             >
               Templates…
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconPhoto size={14} />}
+              onClick={() => setAssetBucketOpen(true)}
+            >
+              Asset Bucket…
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconLanguage size={14} color="#a78bfa" />}
+              onClick={() => setTranslationOpen(true)}
+            >
+              Translations…
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -335,6 +296,65 @@ export function AppHeaderMenuBar({
             >
               Snap to Guides
             </Menu.Item>
+            <Menu.Item
+              leftSection={
+                <IconRuler
+                  size={14}
+                  color={showRuler ? "var(--mantine-color-blue-4)" : undefined}
+                />
+              }
+              rightSection={
+                showRuler ? (
+                  <IconCircleCheck
+                    size={13}
+                    color="var(--mantine-color-blue-4)"
+                  />
+                ) : null
+              }
+              onClick={() => setShowRuler(!showRuler)}
+            >
+              Ruler
+            </Menu.Item>
+            <Menu.Item
+              leftSection={
+                <IconGrid3x3
+                  size={14}
+                  color={showGrid ? "var(--mantine-color-blue-4)" : undefined}
+                />
+              }
+              rightSection={
+                showGrid ? (
+                  <IconCircleCheck
+                    size={13}
+                    color="var(--mantine-color-blue-4)"
+                  />
+                ) : null
+              }
+              onClick={() => setShowGrid(!showGrid)}
+            >
+              Grid
+            </Menu.Item>
+            <Menu.Item
+              leftSection={
+                <IconTimeline
+                  size={14}
+                  color={
+                    showCursorLines ? "var(--mantine-color-blue-4)" : undefined
+                  }
+                />
+              }
+              rightSection={
+                showCursorLines ? (
+                  <IconCircleCheck
+                    size={13}
+                    color="var(--mantine-color-blue-4)"
+                  />
+                ) : null
+              }
+              onClick={() => setShowCursorLines(!showCursorLines)}
+            >
+              Cursor Lines
+            </Menu.Item>
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconPlayerPlay size={14} />}
@@ -357,6 +377,34 @@ export function AppHeaderMenuBar({
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
+
+        {/* Window */}
+        <Menu position="bottom-start" shadow="md" offset={2}>
+          <Menu.Target>{mbLabel("Window")}</Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={
+                <IconTimeline
+                  size={14}
+                  color={
+                    timelineOpen ? "var(--mantine-color-blue-4)" : undefined
+                  }
+                />
+              }
+              rightSection={
+                timelineOpen ? (
+                  <IconCircleCheck
+                    size={13}
+                    color="var(--mantine-color-blue-4)"
+                  />
+                ) : null
+              }
+              onClick={() => setTimelineOpen(!timelineOpen)}
+            >
+              Timeline
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
       </Group>
 
       {/* Hidden inputs */}
@@ -366,13 +414,6 @@ export function AppHeaderMenuBar({
         accept=".json,application/json"
         style={{ display: "none" }}
         onChange={handleLoadFile}
-      />
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={handleImageFile}
       />
 
       {/* Paste JSON Modal */}

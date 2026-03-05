@@ -8,11 +8,22 @@
   ColorInput,
   NumberInput,
   SimpleGrid,
+  Select,
+  SegmentedControl,
 } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import {
+  IconX,
+  IconBold,
+  IconItalic,
+  IconUnderline,
+  IconAlignLeft,
+  IconAlignCenter,
+  IconAlignRight,
+} from "@tabler/icons-react";
 import type { AnswerGroupObject, FrameObject } from "@src/lib/types";
 import { useQuizStore, makeId } from "@src/store/quizStore";
 import { n } from "../utils";
+import { FontFamilySelect } from "../FontFamilySelect/FontFamilySelect";
 
 interface Props {
   obj: AnswerGroupObject;
@@ -36,19 +47,11 @@ export function AnswerGroupFields({ obj, updateObj }: Props) {
     <Stack gap="xs">
       <SimpleGrid cols={2} spacing="xs">
         <NumberInput
-          label="Container W"
-          min={40}
-          value={obj.w ?? 280}
-          onChange={(val) => updateObj({ w: Math.max(40, n(val, 40)) })}
-        />
-        <NumberInput
           label="Btn height"
           min={20}
           value={obj.btnHeight ?? 44}
           onChange={(val) => updateObj({ btnHeight: Math.max(20, n(val, 20)) })}
         />
-      </SimpleGrid>
-      <SimpleGrid cols={2} spacing="xs">
         <NumberInput
           label="Gap between"
           min={0}
@@ -89,6 +92,92 @@ export function AnswerGroupFields({ obj, updateObj }: Props) {
           min={8}
           value={obj.fontSize ?? 16}
           onChange={(val) => updateObj({ fontSize: Math.max(8, n(val, 8)) })}
+        />
+      </SimpleGrid>
+
+      {/* ── Typography ─────────────────────── */}
+      <FontFamilySelect
+        value={obj.fontFamily ?? null}
+        onChange={(f) => updateObj({ fontFamily: f ?? undefined })}
+      />
+      <Group gap={4}>
+        <Select
+          size="xs"
+          data={[
+            { value: "300", label: "Light" },
+            { value: "400", label: "Regular" },
+            { value: "500", label: "Medium" },
+            { value: "600", label: "Semi Bold" },
+            { value: "700", label: "Bold" },
+            { value: "800", label: "Extra Bold" },
+            { value: "900", label: "Black" },
+          ]}
+          value={obj.fontWeight ?? "400"}
+          onChange={(v) => updateObj({ fontWeight: v ?? "400" })}
+          style={{ flex: 1 }}
+          allowDeselect={false}
+        />
+        <ActionIcon
+          variant={obj.italic ? "filled" : "default"}
+          size="sm"
+          onClick={() => updateObj({ italic: !obj.italic })}
+        >
+          <IconItalic size={14} />
+        </ActionIcon>
+        <ActionIcon
+          variant={obj.underline ? "filled" : "default"}
+          size="sm"
+          onClick={() => updateObj({ underline: !obj.underline })}
+        >
+          <IconUnderline size={14} />
+        </ActionIcon>
+      </Group>
+      <SegmentedControl
+        size="xs"
+        fullWidth
+        value={obj.textAlign ?? "center"}
+        onChange={(v) =>
+          updateObj({ textAlign: v as "left" | "center" | "right" })
+        }
+        data={[
+          {
+            value: "left",
+            label: <IconAlignLeft size={14} style={{ display: "block" }} />,
+          },
+          {
+            value: "center",
+            label: <IconAlignCenter size={14} style={{ display: "block" }} />,
+          },
+          {
+            value: "right",
+            label: <IconAlignRight size={14} style={{ display: "block" }} />,
+          },
+        ]}
+      />
+      <SegmentedControl
+        size="xs"
+        fullWidth
+        value={obj.direction ?? "ltr"}
+        onChange={(v) => updateObj({ direction: v as "ltr" | "rtl" })}
+        data={[
+          { value: "ltr", label: "LTR" },
+          { value: "rtl", label: "RTL" },
+        ]}
+      />
+      <SimpleGrid cols={2} spacing="xs">
+        <NumberInput
+          label="Letter spacing"
+          step={0.5}
+          value={obj.letterSpacing ?? 0}
+          onChange={(val) => updateObj({ letterSpacing: n(val) })}
+        />
+        <NumberInput
+          label="Line height"
+          min={0.5}
+          step={0.1}
+          decimalScale={1}
+          value={obj.lineHeight ?? 1.4}
+          onChange={(val) => updateObj({ lineHeight: n(val, 1.4) })}
         />
       </SimpleGrid>
 
@@ -148,4 +237,3 @@ export function AnswerGroupFields({ obj, updateObj }: Props) {
     </Stack>
   );
 }
-

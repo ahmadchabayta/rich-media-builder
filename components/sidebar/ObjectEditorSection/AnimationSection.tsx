@@ -1,4 +1,11 @@
-import { Stack, Text, Select, Divider } from "@mantine/core";
+import {
+  Stack,
+  Text,
+  Select,
+  Divider,
+  NumberInput,
+  Group,
+} from "@mantine/core";
 import { ANIM_IN, ANIM_OUT } from "@src/lib/animPresets";
 import type {
   FrameObject,
@@ -23,17 +30,33 @@ export function AnimationSection({
       <Text size="xs" fw={700} tt="uppercase" c="yellow.5">
         Object Animation
       </Text>
-      <Select
-        label="Role"
-        data={[
-          { value: "other", label: "Other / Generic" },
-          { value: "question", label: "Question" },
-          { value: "answer", label: "Answer" },
-          { value: "image", label: "Decorative Image" },
-        ]}
-        value={selectedObj.role || "other"}
-        onChange={(val) => updateObj({ role: val ?? "other" })}
-      />
+      <Group gap={8} align="flex-end">
+        <Select
+          label="Role"
+          style={{ flex: 1 }}
+          data={[
+            { value: "other", label: "Other / Generic" },
+            { value: "question", label: "Question" },
+            { value: "answer", label: "Answer" },
+            { value: "image", label: "Decorative Image" },
+          ]}
+          value={selectedObj.role || "other"}
+          onChange={(val) => updateObj({ role: val ?? "other" })}
+        />
+        <NumberInput
+          label="Anim order"
+          description="Wave 0 = first in / last out"
+          style={{ width: 90 }}
+          value={selectedObj.animOrder ?? 0}
+          min={0}
+          step={1}
+          onChange={(val) =>
+            updateObj({
+              animOrder: typeof val === "number" ? val : 0,
+            } as Partial<FrameObject>)
+          }
+        />
+      </Group>
 
       <AnimPhaseBlock
         label="Animate In"

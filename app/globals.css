@@ -11,6 +11,17 @@ body {
   font-family: sans-serif;
 }
 
+/* Prevent accidental text selection on UI labels */
+.mantine-NumberInput-label,
+.mantine-ColorInput-label,
+.mantine-Select-label,
+.mantine-Checkbox-label,
+.mantine-TextInput-label,
+.mantine-Slider-label,
+.mantine-Text-root {
+  user-select: none;
+}
+
 /* Dark scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

@@ -1,4 +1,10 @@
-import { useState, useMemo, useEffect, type CSSProperties } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  type CSSProperties,
+} from "react";
 import type { FrameObject as FrameObjectType } from "@src/lib/types";
 import { useDragContext } from "@src/context/DragContext";
 import { useQuizStore } from "@src/store/quizStore";
@@ -8,6 +14,7 @@ import {
   resolveExitAnim,
   resolveLoopAnim,
   collectCustomKeyframes,
+  applyStaggerDelay,
 } from "@src/lib/animCompiler";
 import {
   resolveHoverOverrides,
@@ -19,6 +26,7 @@ import {
   AnswerGroupRender,
   ShapeRender,
   DividerRender,
+  PathRender,
 } from "./FrameObjectRenderers";
 import { InlineTextEditor } from "./InlineTextEditor";
 
@@ -38,6 +46,30 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   const playback = useQuizStore((s) => s.playback);
   const selectedObjectIds = useQuizStore((s) => s.selectedObjectIds);
   const toggleObjectSelection = useQuizStore((s) => s.toggleObjectSelection);
+  // Stagger: read frame-level stagger config and all sibling orders
+  const frameEnterStagger = useQuizStore(
+    (s) => s.quizData.frames[frameIndex]?.enterStagger ?? 0,
+  );
+  const frameExitStagger = useQuizStore(
+    (s) => s.quizData.frames[frameIndex]?.exitStagger ?? 0,
+  );
+  const enterWave = useQuizStore((s) => {
+    const objects = s.quizData.frames[frameIndex]?.objects ?? [];
+    const sorted = [...new Set(objects.map((o) => o.animOrder ?? 0))].sort(
+      (a, b) => a - b,
+    );
+    const idx = sorted.indexOf(obj.animOrder ?? 0);
+    return idx < 0 ? 0 : idx;
+  });
+  const exitWave = useQuizStore((s) => {
+    const objects = s.quizData.frames[frameIndex]?.objects ?? [];
+    const sorted = [...new Set(objects.map((o) => o.animOrder ?? 0))].sort(
+      (a, b) => a - b,
+    );
+    const idx = sorted.indexOf(obj.animOrder ?? 0);
+    const rank = idx < 0 ? 0 : idx;
+    return Math.max(0, sorted.length - 1) - rank;
+  });
 
   const [editing, setEditing] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -108,13 +140,19 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
       const { phase } = playback;
       if (phase === "enter") {
         const r = resolveEnterAnim(obj.animIn, obj.customAnimIn);
-        if (r) baseStyle.animation = r.shorthand;
+        if (r) {
+          const offset = enterWave * frameEnterStagger;
+          baseStyle.animation = applyStaggerDelay(r.shorthand, offset);
+        }
       } else if (phase === "hold") {
         const r = resolveLoopAnim(obj.animLoop, obj.customAnimLoop);
         if (r) baseStyle.animation = r.shorthand;
       } else if (phase === "exit") {
         const r = resolveExitAnim(obj.animOut, obj.customAnimOut);
-        if (r) baseStyle.animation = r.shorthand;
+        if (r) {
+          const offset = exitWave * frameExitStagger;
+          baseStyle.animation = applyStaggerDelay(r.shorthand, offset);
+        }
       }
     } else {
       baseStyle.opacity = 0;
@@ -168,7 +206,10 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
     ) : null;
 
   // ── Inject custom @keyframes into <head> ──────────────────────────────────
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after DOM mutations but before the
+  // browser paints, so the @keyframes rule exists before the first frame that
+  // carries animation: in the inline style — closing the race condition.
+  useLayoutEffect(() => {
     if (!customCSS) return;
     const style = document.createElement("style");
     style.setAttribute("data-bls-obj", obj.id);
@@ -194,6 +235,7 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   if (obj.type === "answerGroup") return <AnswerGroupRender {...shared} />;
   if (obj.type === "shape") return <ShapeRender {...shared} />;
   if (obj.type === "divider") return <DividerRender {...shared} />;
+  if (obj.type === "path") return <PathRender {...shared} />;
 
   // ── Text object ───────────────────────────────────────────────────────────
   const px = obj.paddingX ?? (obj.bgEnabled ? 14 : 0);
@@ -220,10 +262,14 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
     fontStyle: obj.italic ? "italic" : "normal",
     textDecoration: obj.underline ? "underline" : "none",
     textAlign: obj.textAlign ?? "left",
+    direction: obj.direction ?? "ltr",
     letterSpacing:
       obj.letterSpacing != null ? obj.letterSpacing + "px" : undefined,
     lineHeight: obj.lineHeight ?? 1.2,
     fontFamily: obj.fontFamily ?? undefined,
+    textTransform: (obj.textTransform && obj.textTransform !== "none"
+      ? obj.textTransform
+      : undefined) as React.CSSProperties["textTransform"],
     whiteSpace: obj.w != null ? "pre-wrap" : "pre",
     ...bgStyle,
   };

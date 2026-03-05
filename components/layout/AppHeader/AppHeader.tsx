@@ -1,33 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Group,
   Title,
   ActionIcon,
-  Button,
   Divider,
   Text,
   Tooltip,
   Badge,
+  Popover,
+  UnstyledButton,
 } from "@mantine/core";
 import {
-  IconDownload,
   IconArrowBackUp,
   IconArrowForwardUp,
   IconCircleCheck,
   IconAlertCircle,
 } from "@tabler/icons-react";
 import { useQuizStore } from "@src/store/quizStore";
-import { useExport } from "@src/hooks/useExport";
-import type { FrameObject, TextObject } from "@src/lib/types";
+import type {
+  FrameObject,
+  TextObject,
+  AnswerGroupObject,
+  DefaultTypography,
+} from "@src/lib/types";
 import { SaveToCloudModal } from "@src/components/modals/SaveToCloudModal";
 import { CloudProjectsModal } from "@src/components/modals/CloudProjectsModal";
 import { TemplateGallery } from "@src/components/modals/TemplateGallery";
 import { KeyboardShortcutsModal } from "@src/components/modals/KeyboardShortcutsModal";
 import { AiPromptModal } from "@src/components/modals/AiPromptModal";
 import { AdPreviewModal } from "@src/components/modals/AdPreviewModal";
+import { ExportSettingsModal } from "@src/components/modals/ExportSettingsModal";
+import { AssetBucketModal } from "@src/components/modals/AssetBucketModal";
+import { TranslationModal } from "@src/components/modals/TranslationModal";
 import { TextTypographyBar } from "./TextTypographyBar";
 import { AppHeaderMenuBar } from "./AppHeaderMenuBar";
 import { AlignDistributeBar } from "./AlignDistributeBar";
+import { FrameSizeSection } from "@src/components/sidebar/FrameSizeSection";
+import { useExport } from "@src/hooks/useExport";
 
 function formatAgo(ts: number): string {
   const secs = Math.floor((Date.now() - ts) / 1000);
@@ -42,14 +51,17 @@ interface Props {
 }
 
 export function AppHeader({ boardContainerRef }: Props) {
-  const { exportQuiz, exporting } = useExport();
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [saveCloudOpen, setSaveCloudOpen] = useState(false);
   const [cloudBrowserOpen, setCloudBrowserOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiPromptOpen, setAiPromptOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [exportSettingsOpen, setExportSettingsOpen] = useState(false);
+  const [assetBucketOpen, setAssetBucketOpen] = useState(false);
+  const [translationOpen, setTranslationOpen] = useState(false);
   const [timeAgoLabel, setTimeAgoLabel] = useState("");
+  const { exportQuiz } = useExport();
 
   const cloudProjectTitle = useQuizStore((s) => s.cloudProjectTitle);
   const isDirty = useQuizStore((s) => s.isDirty);
@@ -57,12 +69,21 @@ export function AppHeader({ boardContainerRef }: Props) {
   const defaultW = useQuizStore((s) => s.defaultW);
   const defaultH = useQuizStore((s) => s.defaultH);
   const currentPreviewIndex = useQuizStore((s) => s.currentPreviewIndex);
-  const getSelectedObject = useQuizStore((s) => s.getSelectedObject);
+  const selectedObjectId = useQuizStore((s) => s.selectedObjectId);
+  const frames = useQuizStore((s) => s.quizData.frames);
   const updateObject = useQuizStore((s) => s.updateObject);
+  const defaultTypography = useQuizStore((s) => s.defaultTypography);
+  const setDefaultTypography = useQuizStore((s) => s.setDefaultTypography);
   const undo = useQuizStore((s) => s.undo);
   const redo = useQuizStore((s) => s.redo);
   const canUndo = useQuizStore((s) => s.pastSnapshots.length > 0);
   const canRedo = useQuizStore((s) => s.futureSnapshots.length > 0);
+
+  const selectedObject = useMemo(() => {
+    const frame = frames[currentPreviewIndex];
+    if (!frame || !selectedObjectId) return null;
+    return frame.objects.find((o) => o.id === selectedObjectId) ?? null;
+  }, [frames, currentPreviewIndex, selectedObjectId]);
 
   // Refresh relative-time label every 30s
   useEffect(() => {
@@ -90,15 +111,26 @@ export function AppHeader({ boardContainerRef }: Props) {
         <Title order={5} style={{ whiteSpace: "nowrap", lineHeight: 1 }}>
           {cloudProjectTitle ?? "BLS Producer"}
         </Title>
-        <Badge
-          size="xs"
-          variant="outline"
-          color="dark"
-          radius="sm"
-          style={{ flexShrink: 0 }}
-        >
-          {defaultW}×{defaultH}
-        </Badge>
+        <Popover width={200} position="bottom-start" shadow="md" withArrow>
+          <Popover.Target>
+            <Tooltip label="Canvas size" withArrow>
+              <UnstyledButton style={{ display: "inline-flex" }}>
+                <Badge
+                  size="xs"
+                  variant="outline"
+                  color="dark"
+                  radius="sm"
+                  style={{ flexShrink: 0, cursor: "pointer" }}
+                >
+                  {defaultW}×{defaultH}
+                </Badge>
+              </UnstyledButton>
+            </Tooltip>
+          </Popover.Target>
+          <Popover.Dropdown p="sm">
+            <FrameSizeSection />
+          </Popover.Dropdown>
+        </Popover>
       </Group>
 
       <Divider orientation="vertical" mx={4} />
@@ -111,6 +143,9 @@ export function AppHeader({ boardContainerRef }: Props) {
         setPreviewOpen={setPreviewOpen}
         setAiPromptOpen={setAiPromptOpen}
         setShortcutsOpen={setShortcutsOpen}
+        setExportSettingsOpen={setExportSettingsOpen}
+        setAssetBucketOpen={setAssetBucketOpen}
+        setTranslationOpen={setTranslationOpen}
       />
 
       <Divider orientation="vertical" mx={8} />
@@ -122,20 +157,104 @@ export function AppHeader({ boardContainerRef }: Props) {
         style={{ flex: 1, justifyContent: "center", minWidth: 0 }}
       >
         {(() => {
-          const sel = getSelectedObject();
-          if (sel?.type !== "text") return null;
-          const textObj = sel as TextObject;
+          const sel = selectedObject;
+          if (sel?.type === "text") {
+            const textObj = sel as TextObject;
+            return (
+              <>
+                <TextTypographyBar
+                  obj={textObj}
+                  onChange={(patch) =>
+                    updateObject(
+                      currentPreviewIndex,
+                      textObj.id,
+                      (o) => ({ ...o, ...patch }) as FrameObject,
+                    )
+                  }
+                />
+                <Divider orientation="vertical" />
+              </>
+            );
+          }
+          if (sel?.type === "answerGroup") {
+            const ag = sel as AnswerGroupObject;
+            // Bridge AnswerGroupObject fields → TextObject shape
+            const virtual = {
+              ...ag,
+              type: "text" as const,
+              size: ag.fontSize ?? 16,
+              color: ag.textColor ?? "#ffffff",
+              bgColor: ag.btnBgColor ?? "#000000",
+            } as unknown as TextObject;
+            return (
+              <>
+                <TextTypographyBar
+                  obj={virtual}
+                  onChange={(patch) => {
+                    const mapped: Partial<AnswerGroupObject> = {};
+                    if (patch.fontFamily !== undefined)
+                      mapped.fontFamily = patch.fontFamily;
+                    if (patch.fontWeight !== undefined)
+                      mapped.fontWeight = patch.fontWeight;
+                    if (patch.italic !== undefined)
+                      mapped.italic = patch.italic;
+                    if (patch.underline !== undefined)
+                      mapped.underline = patch.underline;
+                    if (patch.textAlign !== undefined)
+                      mapped.textAlign = patch.textAlign;
+                    if (patch.letterSpacing !== undefined)
+                      mapped.letterSpacing = patch.letterSpacing;
+                    if (patch.lineHeight !== undefined)
+                      mapped.lineHeight = patch.lineHeight;
+                    if (patch.size !== undefined) mapped.fontSize = patch.size;
+                    if (patch.color !== undefined)
+                      mapped.textColor = patch.color;
+                    if (patch.bgColor !== undefined)
+                      mapped.btnBgColor = patch.bgColor;
+                    if (patch.textTransform !== undefined)
+                      mapped.textTransform = patch.textTransform;
+                    updateObject(
+                      currentPreviewIndex,
+                      ag.id,
+                      (o) => ({ ...o, ...mapped }) as FrameObject,
+                    );
+                  }}
+                />
+                <Divider orientation="vertical" />
+              </>
+            );
+          }
+          // ── Default typography (no text/answerGroup selected) ──
+          const defaultVirtual: TextObject = {
+            id: "__defaults__",
+            label: "Default",
+            x: 0,
+            y: 0,
+            type: "text",
+            text: "",
+            ...defaultTypography,
+          };
           return (
             <>
+              <Text
+                size="xs"
+                c="dimmed"
+                fw={500}
+                style={{
+                  whiteSpace: "nowrap",
+                  userSelect: "none",
+                  flexShrink: 0,
+                  marginRight: 4,
+                }}
+              >
+                Default
+              </Text>
               <TextTypographyBar
-                obj={textObj}
+                obj={defaultVirtual}
                 onChange={(patch) =>
-                  updateObject(
-                    currentPreviewIndex,
-                    textObj.id,
-                    (o) => ({ ...o, ...patch }) as FrameObject,
-                  )
+                  setDefaultTypography(patch as Partial<DefaultTypography>)
                 }
+                showBgColor={false}
               />
               <Divider orientation="vertical" />
             </>
@@ -200,20 +319,6 @@ export function AppHeader({ boardContainerRef }: Props) {
             <IconArrowForwardUp size={14} />
           </ActionIcon>
         </Tooltip>
-
-        <Divider orientation="vertical" />
-
-        <Button
-          onClick={exportQuiz}
-          loading={exporting}
-          disabled={exporting}
-          color="green"
-          size="sm"
-          leftSection={<IconDownload size={14} />}
-          style={{ flexShrink: 0 }}
-        >
-          {exporting ? "Exporting…" : "Export"}
-        </Button>
       </Group>
 
       {/* ── Modals ── */}
@@ -240,6 +345,36 @@ export function AppHeader({ boardContainerRef }: Props) {
       <AdPreviewModal
         opened={previewOpen}
         onClose={() => setPreviewOpen(false)}
+      />
+      <ExportSettingsModal
+        opened={exportSettingsOpen}
+        onClose={() => setExportSettingsOpen(false)}
+        onExport={exportQuiz}
+      />
+      <AssetBucketModal
+        opened={assetBucketOpen}
+        onClose={() => setAssetBucketOpen(false)}
+        onUseAsset={(asset) => {
+          // Insert as image object into the active frame
+          const { currentPreviewIndex, addObject, getActiveFrame } =
+            useQuizStore.getState();
+          const frame = getActiveFrame();
+          if (!frame) return;
+          addObject(currentPreviewIndex, {
+            id: String(Date.now() + Math.random()),
+            type: "image",
+            label: asset.name,
+            src: asset.src,
+            x: 0,
+            y: 0,
+            w: frame.w,
+            h: frame.h,
+          });
+        }}
+      />
+      <TranslationModal
+        opened={translationOpen}
+        onClose={() => setTranslationOpen(false)}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { QuizData, CustomAnim } from "./types";
+import type { ExportMeta } from "@src/store/types";
 import { compileKeyframesCSS } from "./animCompiler";
 import { SYSTEM_FONTS } from "./fonts";
 
@@ -14,14 +15,21 @@ function collectGoogleFontLinks(quizData: QuizData): string {
 
   for (const frame of quizData.frames) {
     for (const obj of frame.objects) {
-      if (obj.type !== "text") continue;
-      const family = (obj as any).fontFamily as string | undefined;
-      if (!family) continue;
-      if (SYSTEM_FONTS.has(family)) continue; // system font – no link needed
-
-      if (!needed.has(family)) needed.set(family, new Set());
-      const fw = (obj as any).fontWeight as string | undefined;
-      if (fw) needed.get(family)!.add(String(fw));
+      if (obj.type === "text") {
+        const family = (obj as any).fontFamily as string | undefined;
+        if (!family) continue;
+        if (SYSTEM_FONTS.has(family)) continue;
+        if (!needed.has(family)) needed.set(family, new Set());
+        const fw = (obj as any).fontWeight as string | undefined;
+        if (fw) needed.get(family)!.add(String(fw));
+      } else if (obj.type === "answerGroup") {
+        const family = (obj as any).fontFamily as string | undefined;
+        if (!family) continue;
+        if (SYSTEM_FONTS.has(family)) continue;
+        if (!needed.has(family)) needed.set(family, new Set());
+        const fw = (obj as any).fontWeight as string | undefined;
+        if (fw) needed.get(family)!.add(String(fw));
+      }
     }
   }
 
@@ -94,6 +102,7 @@ function customAnimToLoopCfg(ca: CustomAnim): Record<string, unknown> {
 
 function extraDataAttrs(o: any): string {
   let s = "";
+  if (o.id) s += ` data-obj-id="${escAttr(o.id)}"`;
   const loop = o.customAnimLoop
     ? customAnimToLoopCfg(o.customAnimLoop)
     : o.animLoop;
@@ -207,13 +216,23 @@ function buildObjectHtml(
     let wrapCss = `position:absolute;left:${o.x ?? 0}px;top:${o.y ?? 0}px;width:${o.w ?? 280}px;`;
     if (o.opacity != null && o.opacity < 100)
       wrapCss += `opacity:${o.opacity / 100};`;
+    if (o.blendMode) wrapCss += `mix-blend-mode:${o.blendMode};`;
     cssRules.push(`.${cls}{${wrapCss}}`);
-    cssRules.push(
-      `.${cls} .ans-btn{width:100%;height:${bh}px;background:${rgba};border-radius:${brad}px;` +
-        `color:${color};font-size:${fs}px;font-weight:700;` +
-        `display:flex;align-items:center;justify-content:center;overflow:hidden;` +
-        `pointer-events:auto;cursor:pointer;position:relative}`,
-    );
+
+    let btnCss =
+      `width:100%;height:${bh}px;background:${rgba};border-radius:${brad}px;` +
+      `color:${color};font-size:${fs}px;font-weight:${o.fontWeight ?? "700"};` +
+      `display:flex;align-items:center;justify-content:center;overflow:hidden;` +
+      `pointer-events:auto;cursor:pointer;position:relative`;
+    if (o.fontFamily) btnCss += `;font-family:'${o.fontFamily}',sans-serif`;
+    if (o.italic) btnCss += `;font-style:italic`;
+    if (o.underline) btnCss += `;text-decoration:underline`;
+    if (o.textAlign && o.textAlign !== "center")
+      btnCss += `;justify-content:${o.textAlign === "left" ? "flex-start" : "flex-end"};text-align:${o.textAlign}`;
+    if (o.letterSpacing) btnCss += `;letter-spacing:${o.letterSpacing}px`;
+    if (o.lineHeight) btnCss += `;line-height:${o.lineHeight}`;
+    if (o.direction === "rtl") btnCss += `;direction:rtl`;
+    cssRules.push(`.${cls} .ans-btn{${btnCss}}`);
     cssRules.push(`.${cls} .ans-btn:not(:last-child){margin-bottom:${gap}px}`);
 
     // Per-button hover/click data attrs
@@ -265,7 +284,18 @@ function buildObjectHtml(
       `position:absolute;left:${o.x ?? 0}px;top:${o.y ?? 0}px;` +
       `width:${o.w}px;height:${o.h}px;background:${o.fill ?? "transparent"};`;
     if (o.shape === "circle") rule += "border-radius:50%;";
-    else if (o.radius) rule += `border-radius:${o.radius}px;`;
+    else {
+      const hasIndividual =
+        o.radiusTopLeft != null ||
+        o.radiusTopRight != null ||
+        o.radiusBottomRight != null ||
+        o.radiusBottomLeft != null;
+      if (hasIndividual) {
+        rule += `border-radius:${o.radiusTopLeft ?? o.radius ?? 0}px ${o.radiusTopRight ?? o.radius ?? 0}px ${o.radiusBottomRight ?? o.radius ?? 0}px ${o.radiusBottomLeft ?? o.radius ?? 0}px;`;
+      } else if (o.radius) {
+        rule += `border-radius:${o.radius}px;`;
+      }
+    }
     const sw = o.strokeWidth ?? 0;
     if (sw > 0 && o.stroke)
       rule += `border:${sw}px solid ${o.stroke};box-sizing:border-box;`;
@@ -273,6 +303,7 @@ function buildObjectHtml(
       rule += `opacity:${o.opacity / 100};`;
     if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
     if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
+    if (o.blendMode) rule += `mix-blend-mode:${o.blendMode};`;
     cssRules.push(`.${cls}{${rule}}`);
     emitInteractionCss(o, cls, cssRules);
     return (
@@ -298,11 +329,40 @@ function buildObjectHtml(
       rule += `opacity:${o.opacity / 100};`;
     if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
     if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
+    if (o.blendMode) rule += `mix-blend-mode:${o.blendMode};`;
     cssRules.push(`.${cls}{${rule}}`);
     emitInteractionCss(o, cls, cssRules);
     return (
       `<div class="${cls}" data-role="${role}" ` +
       `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${extraDataAttrs(o)}></div>`
+    );
+  }
+
+  //  path (pen tool)
+  if (o.type === "path") {
+    const px = o.x ?? 0;
+    const py = o.y ?? 0;
+    const pw = o.w ?? 100;
+    const ph = o.h ?? 100;
+    let rule =
+      `position:absolute;left:${px}px;top:${py}px;` +
+      `width:${pw}px;height:${ph}px;overflow:visible;pointer-events:none;`;
+    if (o.opacity != null && o.opacity < 100)
+      rule += `opacity:${o.opacity / 100};`;
+    if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
+    if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
+    if (o.blendMode) rule += `mix-blend-mode:${o.blendMode};`;
+    cssRules.push(`.${cls}{${rule}}`);
+    emitInteractionCss(o, cls, cssRules);
+    const stroke = escAttr(o.stroke ?? "#ffffff");
+    const sw = o.strokeWidth ?? 2;
+    const fill = escAttr(o.fill ?? "none");
+    return (
+      `<svg class="${cls}" data-role="${role}" ` +
+      `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}"${extraDataAttrs(o)}>` +
+      `<path d="${escAttr(o.d ?? "")}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}" ` +
+      `stroke-linejoin="round" stroke-linecap="round"/>` +
+      `</svg>`
     );
   }
 
@@ -315,6 +375,7 @@ function buildObjectHtml(
       rule += `opacity:${o.opacity / 100};`;
     if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
     if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
+    if (o.blendMode) rule += `mix-blend-mode:${o.blendMode};`;
     cssRules.push(`.${cls}{${rule}}`);
     emitInteractionCss(o, cls, cssRules);
     return (
@@ -336,6 +397,7 @@ function buildObjectHtml(
     `font-weight:${o.fontWeight ?? "700"};line-height:${o.lineHeight ?? 1.2};` +
     `white-space:pre-wrap;pointer-events:none;`;
   if (o.textAlign) rule += `text-align:${o.textAlign};`;
+  if (o.direction === "rtl") rule += `direction:rtl;`;
   if (o.fontFamily) rule += `font-family:'${o.fontFamily}',sans-serif;`;
   if (o.letterSpacing) rule += `letter-spacing:${o.letterSpacing}px;`;
   if (o.italic) rule += "font-style:italic;";
@@ -350,6 +412,7 @@ function buildObjectHtml(
     rule += `opacity:${o.opacity / 100};`;
   if (o.rotation) rule += `transform:rotate(${o.rotation}deg);`;
   if (o.zIndex != null) rule += `z-index:${o.zIndex};`;
+  if (o.blendMode) rule += `mix-blend-mode:${o.blendMode};`;
   cssRules.push(`.${cls}{${rule}}`);
   emitInteractionCss(o, cls, cssRules);
 
@@ -368,6 +431,7 @@ function buildParts(
   quizData: QuizData,
   w: number,
   h: number,
+  trackerMeta?: { creativeName: string; countryCode: string; language: string },
 ): {
   framesHtml: string;
   bgHtml: string;
@@ -381,7 +445,7 @@ function buildParts(
     `body,html{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;font-family:sans-serif;background:#000}`,
     `#ad{width:100%;height:100%;position:relative;overflow:hidden;cursor:pointer}`,
     `.bg-layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}`,
-    `.bg-global{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}`,
+    `.bg-global{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}`,
     `.fp{position:absolute;inset:0;overflow:hidden;visibility:hidden;z-index:1;pointer-events:none}`,
     `.fp.active{visibility:visible;z-index:2;pointer-events:auto}`,
     `.fp.exiting{visibility:visible;z-index:3;pointer-events:none}`,
@@ -477,11 +541,14 @@ function buildParts(
       const bgSrc = f.bgImage ?? quizData.bg;
       if (bgSrc) {
         const anim = f.bgImageAnim;
-        const animCss =
-          anim?.type && anim.type !== "none"
-            ? ` style="animation:${anim.type} ${anim.dur}ms ease-in-out infinite alternate"`
-            : "";
-        inner += `<img src="${escAttr(bgSrc)}" class="bg-global"${animCss} alt="">`;
+        const bgFit = f.bgImageSize ?? "cover";
+        const bgPosX = f.bgImagePosX ?? 50;
+        const bgPosY = f.bgImagePosY ?? 50;
+        let inlineStyle = `object-fit:${bgFit};object-position:${bgPosX}% ${bgPosY}%`;
+        if (anim?.type && anim.type !== "none") {
+          inlineStyle += `;animation:${anim.type} ${anim.dur}ms ease-in-out infinite alternate`;
+        }
+        inner += `<img src="${escAttr(bgSrc)}" class="bg-global" style="${inlineStyle}" alt="">`;
       }
       if (f.src) inner += `<img src="${escAttr(f.src)}" class="fbase">`;
 
@@ -502,13 +569,48 @@ function buildParts(
   // bgHtml is now empty — global bg is rendered inside each frame panel instead
   const bgHtml = "";
 
+  // Append user-provided custom CSS
+  if (quizData.customCss) cssRules.push(quizData.customCss);
+
   const css = cssRules.join("\n");
 
+  // Embed translations map into JS if any exist
+  const translationsMap = quizData.translations ?? {};
+  const hasTranslations = Object.keys(translationsMap).length > 0;
+  const translationsBlock = hasTranslations
+    ? `var __BLS_TRANS__=${JSON.stringify(translationsMap)};
+  function applyTranslations(){
+    var lang=(window.__BLS_LANG__||(new URLSearchParams(location.search)).get('lang')||'').toLowerCase();
+    if(!lang||!__BLS_TRANS__[lang])return;
+    var map=__BLS_TRANS__[lang];
+    document.querySelectorAll('[data-obj-id]').forEach(function(el){
+      var id=el.getAttribute('data-obj-id');
+      if(map[id]!=null)el.innerHTML=map[id].replace(/\\n/g,'<br>');
+    });
+  }
+  applyTranslations();
+`
+    : "";
+
   // JS: all animation config read from data-attributes
+  const trackerBlock = trackerMeta
+    ? `
+  var LN="${trackerMeta.language}";
+  var CC="${trackerMeta.countryCode}";
+  var CN="${trackerMeta.creativeName}";
+  function tracker(answer){
+    fetch("https://rm.memob.com?event="+encodeURIComponent(answer)+"&ln="+LN+"&cc="+CC+"&creativename="+CN,{method:"GET",mode:"cors"}).catch(function(e){console.log("Tracking error:",e)});
+  }
+`
+    : "";
+
+  const trackerCall = trackerMeta ? "tracker(slug);" : "";
+
   const js = `(function(){
   var panels=Array.from(document.querySelectorAll('.fp'));
   var total=panels.length,cur=0,busy=false;
   var answers=[];window.__blsAnswers=answers;
+${trackerBlock}${translationsBlock}
 
   function resetAnim(el){el.style.animation='none';void el.offsetWidth}
 
@@ -569,6 +671,7 @@ function buildParts(
         var frameIdx=Number(btn.getAttribute('data-frame-idx')||0);
         var ansIdx=Number(btn.getAttribute('data-ans-idx')||0);
         answers.push({frame:frameIdx,answer:slug,index:ansIdx,timestamp:Date.now()});
+        ${trackerCall}
         var ct=btn.getAttribute('data-click');
         if(ct&&ct!=='none'){
           btn.style.animation='none';void btn.offsetWidth;
@@ -636,11 +739,13 @@ export function generateExportFiles(
   quizData: QuizData,
   defaultW: number,
   defaultH: number,
+  trackerMeta?: { creativeName: string; countryCode: string; language: string },
 ): ExportFiles {
   const { framesHtml, bgHtml, css, js, googleFontLinks } = buildParts(
     quizData,
     defaultW,
     defaultH,
+    trackerMeta,
   );
 
   const html =

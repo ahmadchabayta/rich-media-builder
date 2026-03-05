@@ -8,6 +8,8 @@ import {
   Group,
   ActionIcon,
   Divider,
+  Button,
+  FileButton,
 } from "@mantine/core";
 import {
   IconTypography,
@@ -19,8 +21,13 @@ import {
   IconLockOpen,
   IconSquare,
   IconMinus,
+  IconVector,
+  IconCopy,
+  IconX,
+  IconPlus,
+  IconUpload,
 } from "@tabler/icons-react";
-import { useQuizStore } from "@src/store/quizStore";
+import { useQuizStore, makeId } from "@src/store/quizStore";
 import type { FrameObject } from "@src/lib/types";
 import { useState, useEffect, useRef } from "react";
 
@@ -30,6 +37,7 @@ const OBJECT_ICON: Record<FrameObject["type"], React.ReactNode> = {
   answerGroup: <IconLayoutList size={12} />,
   shape: <IconSquare size={12} />,
   divider: <IconMinus size={12} />,
+  path: <IconVector size={12} />,
 };
 
 export function LayersTab() {
@@ -41,6 +49,11 @@ export function LayersTab() {
   const toggleObjectVisibility = useQuizStore((s) => s.toggleObjectVisibility);
   const toggleObjectLock = useQuizStore((s) => s.toggleObjectLock);
   const moveObjectToIndex = useQuizStore((s) => s.moveObjectToIndex);
+  const defaultW = useQuizStore((s) => s.defaultW);
+  const defaultH = useQuizStore((s) => s.defaultH);
+  const addFrame = useQuizStore((s) => s.addFrame);
+  const removeFrame = useQuizStore((s) => s.removeFrame);
+  const duplicateFrame = useQuizStore((s) => s.duplicateFrame);
 
   const dragFromStoreIndex = useRef<number | null>(null);
   const [dropIndicator, setDropIndicator] = useState<number | null>(null);
@@ -62,6 +75,47 @@ export function LayersTab() {
 
   if (!mounted) return null;
 
+  const handleAddBlankFrame = () => {
+    addFrame({
+      id: makeId(),
+      src: null,
+      objects: [],
+      w: defaultW,
+      h: defaultH,
+      isDefault: false,
+      isEndFrame: false,
+      animEnter: { type: "blsFadeIn", dur: 400 },
+      animExit: { type: "blsFadeOut", dur: 300 },
+      answerStagger: 80,
+    });
+  };
+
+  const handleFrameFiles = (files: File[]) => {
+    if (!files.length) return;
+    // If there's only a single default frame, remove it
+    if (frames.length === 1 && frames[0].isDefault) {
+      removeFrame(0);
+    }
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (f) => {
+        addFrame({
+          id: makeId(),
+          src: f.target!.result as string,
+          objects: [],
+          w: defaultW,
+          h: defaultH,
+          isDefault: false,
+          isEndFrame: false,
+          animEnter: { type: "blsFadeIn", dur: 400 },
+          animExit: { type: "blsFadeOut", dur: 300 },
+          answerStagger: 80,
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   return (
     <ScrollArea h="100%" type="auto">
       <Stack gap={0} p="xs">
@@ -78,10 +132,12 @@ export function LayersTab() {
           Frames
         </Text>
         {frames.map((f, i) => (
-          <Box
+          <Group
             key={f.id}
             px={8}
             py={4}
+            gap={4}
+            wrap="nowrap"
             style={{
               borderRadius: 4,
               cursor: "pointer",
@@ -92,12 +148,66 @@ export function LayersTab() {
             }}
             onClick={() => useQuizStore.getState().setActiveFrame(i)}
           >
-            <Text size="xs" c={i === currentPreviewIndex ? "white" : "dimmed"}>
+            <Text
+              size="xs"
+              c={i === currentPreviewIndex ? "white" : "dimmed"}
+              style={{ flex: 1 }}
+            >
               Frame {i + 1}
               {f.isEndFrame ? " — End" : ""}
             </Text>
-          </Box>
+            <ActionIcon
+              size={16}
+              variant="transparent"
+              c="dimmed"
+              tabIndex={-1}
+              title="Duplicate frame"
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateFrame(i);
+              }}
+            >
+              <IconCopy size={11} />
+            </ActionIcon>
+            <ActionIcon
+              size={16}
+              variant="transparent"
+              c="red"
+              tabIndex={-1}
+              title="Delete frame"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeFrame(i);
+              }}
+            >
+              <IconX size={11} />
+            </ActionIcon>
+          </Group>
         ))}
+
+        {/* Frame management buttons */}
+        <Group gap={4} px={4} pt={4}>
+          <ActionIcon
+            size="xs"
+            variant="subtle"
+            title="Add blank frame"
+            onClick={handleAddBlankFrame}
+          >
+            <IconPlus size={12} />
+          </ActionIcon>
+          <FileButton onChange={handleFrameFiles} accept="image/*" multiple>
+            {(props) => (
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                title="Upload frame images"
+                {...props}
+              >
+                <IconUpload size={12} />
+              </ActionIcon>
+            )}
+          </FileButton>
+        </Group>
 
         <Divider my="xs" />
 

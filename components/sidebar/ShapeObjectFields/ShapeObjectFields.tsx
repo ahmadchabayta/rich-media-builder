@@ -4,7 +4,9 @@
   ColorInput,
   Select,
   SimpleGrid,
+  Checkbox,
 } from "@mantine/core";
+import { useState } from "react";
 import type { ShapeObject } from "@src/lib/types";
 import { n } from "../utils";
 
@@ -14,6 +16,13 @@ interface Props {
 }
 
 export function ShapeObjectFields({ obj, updateObj }: Props) {
+  const hasIndividual =
+    obj.radiusTopLeft != null ||
+    obj.radiusTopRight != null ||
+    obj.radiusBottomRight != null ||
+    obj.radiusBottomLeft != null;
+  const [individual, setIndividual] = useState(hasIndividual);
+
   return (
     <Stack gap="xs">
       <Select
@@ -28,23 +37,6 @@ export function ShapeObjectFields({ obj, updateObj }: Props) {
           updateObj({ shape: (v as ShapeObject["shape"]) ?? "rect" })
         }
       />
-
-      <SimpleGrid cols={2} spacing="xs">
-        <NumberInput
-          label="Width"
-          size="xs"
-          value={obj.w ?? 80}
-          min={1}
-          onChange={(v) => updateObj({ w: n(v, 1) })}
-        />
-        <NumberInput
-          label="Height"
-          size="xs"
-          value={obj.h ?? 80}
-          min={1}
-          onChange={(v) => updateObj({ h: n(v, 1) })}
-        />
-      </SimpleGrid>
 
       <ColorInput
         label="Fill"
@@ -85,16 +77,72 @@ export function ShapeObjectFields({ obj, updateObj }: Props) {
       </SimpleGrid>
 
       {obj.shape === "rect" && (
-        <NumberInput
-          label="Corner radius"
-          size="xs"
-          value={obj.radius ?? 0}
-          min={0}
-          max={200}
-          onChange={(v) => updateObj({ radius: n(v, 0) })}
-        />
+        <>
+          <Checkbox
+            size="xs"
+            checked={individual}
+            onChange={(e) => {
+              const on = e.currentTarget.checked;
+              setIndividual(on);
+              if (!on) {
+                // Reset individual corners, keep uniform radius
+                updateObj({
+                  radiusTopLeft: undefined,
+                  radiusTopRight: undefined,
+                  radiusBottomRight: undefined,
+                  radiusBottomLeft: undefined,
+                });
+              }
+            }}
+            label="Individual corners"
+          />
+          {individual ? (
+            <SimpleGrid cols={2} spacing="xs">
+              <NumberInput
+                label="Top Left"
+                size="xs"
+                value={obj.radiusTopLeft ?? obj.radius ?? 0}
+                min={0}
+                max={200}
+                onChange={(v) => updateObj({ radiusTopLeft: n(v, 0) })}
+              />
+              <NumberInput
+                label="Top Right"
+                size="xs"
+                value={obj.radiusTopRight ?? obj.radius ?? 0}
+                min={0}
+                max={200}
+                onChange={(v) => updateObj({ radiusTopRight: n(v, 0) })}
+              />
+              <NumberInput
+                label="Bottom Left"
+                size="xs"
+                value={obj.radiusBottomLeft ?? obj.radius ?? 0}
+                min={0}
+                max={200}
+                onChange={(v) => updateObj({ radiusBottomLeft: n(v, 0) })}
+              />
+              <NumberInput
+                label="Bottom Right"
+                size="xs"
+                value={obj.radiusBottomRight ?? obj.radius ?? 0}
+                min={0}
+                max={200}
+                onChange={(v) => updateObj({ radiusBottomRight: n(v, 0) })}
+              />
+            </SimpleGrid>
+          ) : (
+            <NumberInput
+              label="Corner radius"
+              size="xs"
+              value={obj.radius ?? 0}
+              min={0}
+              max={200}
+              onChange={(v) => updateObj({ radius: n(v, 0) })}
+            />
+          )}
+        </>
       )}
     </Stack>
   );
 }
-

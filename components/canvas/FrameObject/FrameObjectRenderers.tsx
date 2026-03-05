@@ -6,6 +6,7 @@ import type {
   AnswerGroupObject,
   ShapeObject,
   DividerObject,
+  PathObject,
 } from "@src/lib/types";
 import { hexOpacityToRgba } from "./frameObjectUtils";
 
@@ -124,10 +125,29 @@ export function AnswerGroupRender({
             borderRadius: (ag.btnRadius ?? 24) + "px",
             color: ag.textColor ?? "#fff",
             fontSize: (ag.fontSize ?? 16) + "px",
-            fontWeight: 700,
+            fontFamily: ag.fontFamily
+              ? `'${ag.fontFamily}', sans-serif`
+              : undefined,
+            fontWeight: ag.fontWeight ?? 700,
+            fontStyle: ag.italic ? "italic" : undefined,
+            textDecoration: ag.underline ? "underline" : undefined,
+            letterSpacing: ag.letterSpacing
+              ? ag.letterSpacing + "px"
+              : undefined,
+            lineHeight: ag.lineHeight ?? undefined,
+            textTransform: (ag.textTransform && ag.textTransform !== "none"
+              ? ag.textTransform
+              : undefined) as React.CSSProperties["textTransform"],
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent:
+              ag.textAlign === "left"
+                ? "flex-start"
+                : ag.textAlign === "right"
+                  ? "flex-end"
+                  : "center",
+            textAlign: ag.textAlign ?? "center",
+            direction: ag.direction ?? "ltr",
             overflow: "hidden",
             pointerEvents: "none",
             marginBottom:
@@ -166,6 +186,16 @@ export function ShapeRender({
 }: SharedRenderProps) {
   const s = obj as ShapeObject;
   const isCircle = s.shape === "circle";
+  const hasIndividualRadius =
+    s.radiusTopLeft != null ||
+    s.radiusTopRight != null ||
+    s.radiusBottomRight != null ||
+    s.radiusBottomLeft != null;
+  const borderRadius = isCircle
+    ? "50%"
+    : hasIndividualRadius
+      ? `${s.radiusTopLeft ?? s.radius ?? 0}px ${s.radiusTopRight ?? s.radius ?? 0}px ${s.radiusBottomRight ?? s.radius ?? 0}px ${s.radiusBottomLeft ?? s.radius ?? 0}px`
+      : (s.radius ?? 0) + "px";
   return (
     <div
       data-obj-id={obj.id}
@@ -178,7 +208,7 @@ export function ShapeRender({
         border: s.stroke
           ? `${s.strokeWidth ?? 2}px solid ${s.stroke}`
           : undefined,
-        borderRadius: isCircle ? "50%" : (s.radius ?? 0) + "px",
+        borderRadius,
       }}
       onMouseDown={handleMouseDown}
       {...hoverProps}
@@ -218,5 +248,44 @@ export function DividerRender({
     >
       {resizeHandles}
     </div>
+  );
+}
+
+/** SVG path/pen tool renderer */
+export function PathRender({
+  obj,
+  frameIndex,
+  baseStyle,
+  handleMouseDown,
+  hoverProps,
+  resizeHandles,
+}: SharedRenderProps) {
+  const p = obj as PathObject;
+  return (
+    <svg
+      data-obj-id={obj.id}
+      data-fi={frameIndex}
+      style={{
+        ...baseStyle,
+        position: "absolute",
+        left: (p.x ?? 0) + "px",
+        top: (p.y ?? 0) + "px",
+        width: (p.w ?? 100) + "px",
+        height: (p.h ?? 100) + "px",
+        overflow: "visible",
+      }}
+      onMouseDown={handleMouseDown}
+      {...hoverProps}
+    >
+      <path
+        d={p.d}
+        stroke={p.stroke ?? "#ffffff"}
+        strokeWidth={p.strokeWidth ?? 2}
+        fill={p.fill ?? "none"}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {resizeHandles}
+    </svg>
   );
 }

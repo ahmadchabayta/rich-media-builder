@@ -65,7 +65,8 @@ export function presetShorthand(
   const iterations = cfg.iterationCount ?? 1;
   const iterStr = iterations === "infinite" ? "infinite" : String(iterations);
   const direction = cfg.direction ?? "normal";
-  return `${cfg.type} ${dur} ${defaultEasing} ${delay} ${iterStr} ${direction} both`;
+  const fill = cfg.fillMode ?? "both";
+  return `${cfg.type} ${dur} ${defaultEasing} ${delay} ${iterStr} ${direction} ${fill}`;
 }
 
 /**
@@ -149,6 +150,25 @@ export function resolveLoopAnim(
     };
   }
   return null;
+}
+
+// ── Apply extra delay offset to an existing animation shorthand ─────────────
+/**
+ * Adds extraDelayMs to the delay token inside an animation shorthand string.
+ * Both duration and delay are emitted as `Xms` — the second `Xms` token is
+ * always the delay (first is the duration).
+ */
+export function applyStaggerDelay(
+  shorthand: string,
+  extraDelayMs: number,
+): string {
+  if (extraDelayMs === 0) return shorthand;
+  let count = 0;
+  return shorthand.replace(/\b(\d+)ms\b/g, (_, n) => {
+    count++;
+    if (count === 2) return `${parseInt(n) + extraDelayMs}ms`;
+    return `${n}ms`;
+  });
 }
 
 // ── Collect all custom @keyframes for an object ─────────────────────────────

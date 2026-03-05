@@ -1,4 +1,41 @@
-import type { Frame, FrameObject, QuizData } from "@src/lib/types";
+import type {
+  Frame,
+  FrameObject,
+  QuizData,
+  DefaultTypography,
+} from "@src/lib/types";
+
+// ─── Custom Fonts ────────────────────────────────────────────────────────────
+
+export interface CustomFontEntry {
+  id: string;
+  family: string;
+  src: string; // data-URL for uploaded fonts; "" for URL-loaded Google fonts
+  addedAt: number;
+}
+
+// ─── Asset Bucket ─────────────────────────────────────────────────────────────
+
+export interface AssetItem {
+  id: string;
+  name: string;
+  src: string; // data URL or object URL
+  addedAt: number; // timestamp
+}
+
+// ─── Export metadata ───────────────────────────────────────────────────────────
+
+export interface ExportCountry {
+  code: string; // e.g. "ksa", "uae"
+  languages: string[]; // e.g. ["en", "ar"]
+}
+
+export interface ExportMeta {
+  clientName: string; // e.g. "chuck-e-cheese"
+  adName: string; // e.g. "summer-promo"
+  adKind: string; // e.g. "bls"
+  countries: ExportCountry[];
+}
 
 // ─── Shared utilities ──────────────────────────────────────────────────────────
 
@@ -18,6 +55,8 @@ export function makeDefaultFrame(defaultW: number, defaultH: number): Frame {
     animEnter: { type: "blsFadeIn", dur: 400 },
     animExit: { type: "blsFadeOut", dur: 300 },
     answerStagger: 80,
+    enterStagger: 0,
+    exitStagger: 0,
   };
 }
 
@@ -61,6 +100,7 @@ export interface QuizState {
     updater: (obj: FrameObject) => FrameObject,
   ) => void;
   duplicateObject: (frameIndex: number, objId: string) => void;
+  copyObjectToAllFrames: (frameIndex: number, objId: string) => void;
   commitObjectPosition: (
     frameIndex: number,
     objId: string,
@@ -98,6 +138,9 @@ export interface QuizState {
   snapEnabled: boolean;
   showRuler: boolean;
   showGrid: boolean;
+  timelineOpen: boolean;
+  zoom: number;
+  showCursorLines: boolean;
 
   getActiveFrame: () => Frame | null;
   getSelectedObject: () => FrameObject | null;
@@ -107,6 +150,13 @@ export interface QuizState {
   setSnapEnabled: (v: boolean) => void;
   setShowRuler: (v: boolean) => void;
   setShowGrid: (v: boolean) => void;
+  setTimelineOpen: (v: boolean) => void;
+  setZoom: (v: number) => void;
+  setShowCursorLines: (v: boolean) => void;
+  penMode: boolean;
+  setPenMode: (v: boolean) => void;
+  defaultTypography: DefaultTypography;
+  setDefaultTypography: (patch: Partial<DefaultTypography>) => void;
 
   // ── History ─────────────────────────────────────────────────────────────────
   pastSnapshots: QuizData[];
@@ -132,12 +182,41 @@ export interface QuizState {
   // ── Cloud / persistence ─────────────────────────────────────────────────────
   cloudProjectId: string | null;
   cloudProjectTitle: string | null;
+  cloudProjectClient: string | null;
+  cloudProjectLocales: string[];
+  cloudProjectRegions: string[];
   lastSavedAt: number | null;
 
   setCloudProjectId: (id: string | null) => void;
   setCloudProjectTitle: (title: string | null) => void;
+  setCloudProjectClient: (client: string | null) => void;
+  setCloudProjectLocales: (locales: string[]) => void;
+  setCloudProjectRegions: (regions: string[]) => void;
   markSaved: () => void;
   loadProject: (data: ProjectSnapshot) => void;
+
+  // ── Export metadata ─────────────────────────────────────────────────────────
+  exportMeta: ExportMeta;
+  setExportMeta: (meta: Partial<ExportMeta>) => void;
+
+  // ── Custom CSS ──────────────────────────────────────────────────────────────
+  customCss: string;
+  setCustomCss: (css: string) => void;
+
+  // ── Asset bucket ────────────────────────────────────────────────────────────
+  assets: AssetItem[];
+  addAsset: (item: AssetItem) => void;
+  removeAsset: (id: string) => void;
+
+  // ── Custom fonts ─────────────────────────────────────────────────────────────
+  customFonts: CustomFontEntry[];
+  addCustomFont: (entry: CustomFontEntry) => void;
+  removeCustomFont: (id: string) => void;
+
+  // ── Translations ─────────────────────────────────────────────────────────
+  setTranslation: (locale: string, objId: string, text: string) => void;
+  removeTranslationLocale: (locale: string) => void;
+  duplicateFramesAsLocale: (locale: string) => void;
 }
 
 // ─── Slice helper types ───────────────────────────────────────────────────────

@@ -4,6 +4,12 @@ import {
   IconArrowsVertical,
   IconLayoutDistributeHorizontal,
   IconLayoutDistributeVertical,
+  IconAlignLeft,
+  IconAlignRight,
+  IconAlignCenter,
+  IconAlignBoxLeftMiddle,
+  IconAlignBoxRightMiddle,
+  IconAlignBoxCenterMiddle,
 } from "@tabler/icons-react";
 import { useQuizStore } from "@src/store/quizStore";
 import {
@@ -11,6 +17,12 @@ import {
   calcCenterV,
   spreadObjsH,
   spreadObjsV,
+  alignLeft,
+  alignRight,
+  alignTop,
+  alignBottom,
+  alignCenterH,
+  alignCenterV,
 } from "@src/lib/align";
 
 interface AlignDistributeBarProps {
@@ -73,6 +85,71 @@ export function AlignDistributeBar({
     });
   };
 
+  // ── Multi-select alignment (Photoshop-style) ──────────────────────────
+  const handleAlignLeft = () => {
+    const frame = getActiveFrame();
+    if (!frame || selectedObjectIds.length < 2) return;
+    updateFrameField(currentPreviewIndex, {
+      objects: alignLeft(frame.objects, selectedObjectIds),
+    });
+  };
+
+  const handleAlignRight = () => {
+    const frame = getActiveFrame();
+    if (!frame || selectedObjectIds.length < 2) return;
+    updateFrameField(currentPreviewIndex, {
+      objects: alignRight(
+        frame.objects,
+        selectedObjectIds,
+        boardContainerRef.current,
+      ),
+    });
+  };
+
+  const handleAlignTop = () => {
+    const frame = getActiveFrame();
+    if (!frame || selectedObjectIds.length < 2) return;
+    updateFrameField(currentPreviewIndex, {
+      objects: alignTop(frame.objects, selectedObjectIds),
+    });
+  };
+
+  const handleAlignBottom = () => {
+    const frame = getActiveFrame();
+    if (!frame || selectedObjectIds.length < 2) return;
+    updateFrameField(currentPreviewIndex, {
+      objects: alignBottom(
+        frame.objects,
+        selectedObjectIds,
+        boardContainerRef.current,
+      ),
+    });
+  };
+
+  const handleAlignCenterH = () => {
+    const frame = getActiveFrame();
+    if (!frame || selectedObjectIds.length < 2) return;
+    updateFrameField(currentPreviewIndex, {
+      objects: alignCenterH(
+        frame.objects,
+        selectedObjectIds,
+        boardContainerRef.current,
+      ),
+    });
+  };
+
+  const handleAlignCenterV = () => {
+    const frame = getActiveFrame();
+    if (!frame || selectedObjectIds.length < 2) return;
+    updateFrameField(currentPreviewIndex, {
+      objects: alignCenterV(
+        frame.objects,
+        selectedObjectIds,
+        boardContainerRef.current,
+      ),
+    });
+  };
+
   if (selectedObjectIds.length === 0) return null;
 
   const multiCount = selectedObjectIds.length;
@@ -89,6 +166,79 @@ export function AlignDistributeBar({
           <IconArrowsVertical size={14} />
         </ActionIcon>
       </Tooltip>
+
+      {multiCount >= 2 && (
+        <>
+          <Divider orientation="vertical" mx={2} />
+          <Tooltip label="Align left edges" withArrow>
+            <ActionIcon
+              onClick={handleAlignLeft}
+              variant="light"
+              color="blue"
+              size={26}
+            >
+              <IconAlignLeft size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Align horizontal centres" withArrow>
+            <ActionIcon
+              onClick={handleAlignCenterH}
+              variant="light"
+              color="blue"
+              size={26}
+            >
+              <IconAlignCenter size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Align right edges" withArrow>
+            <ActionIcon
+              onClick={handleAlignRight}
+              variant="light"
+              color="blue"
+              size={26}
+            >
+              <IconAlignRight size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Align top edges" withArrow>
+            <ActionIcon
+              onClick={handleAlignTop}
+              variant="light"
+              color="blue"
+              size={26}
+            >
+              <IconAlignBoxLeftMiddle
+                size={14}
+                style={{ transform: "rotate(90deg)" }}
+              />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Align vertical centres" withArrow>
+            <ActionIcon
+              onClick={handleAlignCenterV}
+              variant="light"
+              color="blue"
+              size={26}
+            >
+              <IconAlignBoxCenterMiddle size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Align bottom edges" withArrow>
+            <ActionIcon
+              onClick={handleAlignBottom}
+              variant="light"
+              color="blue"
+              size={26}
+            >
+              <IconAlignBoxRightMiddle
+                size={14}
+                style={{ transform: "rotate(90deg)" }}
+              />
+            </ActionIcon>
+          </Tooltip>
+        </>
+      )}
+
       <Divider orientation="vertical" mx={2} />
       <Tooltip
         label={

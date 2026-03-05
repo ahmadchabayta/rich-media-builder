@@ -1,4 +1,4 @@
-import type { SliceSet, SliceGet } from "../types";
+import type { SliceSet, SliceGet, CustomFontEntry } from "../types";
 
 export const selectionSlice = (set: SliceSet, get: SliceGet) => ({
   // ── State ────────────────────────────────────────────────────────────────────
@@ -8,6 +8,19 @@ export const selectionSlice = (set: SliceSet, get: SliceGet) => ({
   snapEnabled: true,
   showRuler: true,
   showGrid: false,
+  timelineOpen: true,
+  zoom: 1,
+  showCursorLines: true,
+  penMode: false,
+  customFonts: [] as CustomFontEntry[],
+  defaultTypography: {
+    size: 22,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: 0,
+    lineHeight: 1.2,
+    textTransform: "none" as const,
+  },
   playback: null as {
     frameIdx: number;
     phase: "enter" | "hold" | "exit";
@@ -49,6 +62,29 @@ export const selectionSlice = (set: SliceSet, get: SliceGet) => ({
   setSnapEnabled: (v: boolean) => set({ snapEnabled: v }),
   setShowRuler: (v: boolean) => set({ showRuler: v }),
   setShowGrid: (v: boolean) => set({ showGrid: v }),
+  setTimelineOpen: (v: boolean) => set({ timelineOpen: v }),
+  setZoom: (v: number) => set({ zoom: Math.max(0.25, Math.min(3, v)) }),
+  setShowCursorLines: (v: boolean) => set({ showCursorLines: v }),
+  setPenMode: (v: boolean) => set({ penMode: v }),
+  addCustomFont: (entry: CustomFontEntry) =>
+    set((s) => ({ customFonts: [...s.customFonts, entry] })),
+  removeCustomFont: (id: string) =>
+    set((s) => ({ customFonts: s.customFonts.filter((f) => f.id !== id) })),
+  setDefaultTypography: (
+    patch: Partial<{
+      size: number;
+      fontWeight: string;
+      color: string;
+      fontFamily?: string;
+      letterSpacing: number;
+      lineHeight: number;
+      textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+      italic?: boolean;
+      underline?: boolean;
+      textAlign?: "left" | "center" | "right";
+    }>,
+  ) =>
+    set((s) => ({ defaultTypography: { ...s.defaultTypography, ...patch } })),
   setPlayback: (
     pb: { frameIdx: number; phase: "enter" | "hold" | "exit" } | null,
   ) => set({ playback: pb }),

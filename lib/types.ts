@@ -15,6 +15,7 @@ export interface AnimConfig {
   delay?: number;
   iterationCount?: number | "infinite"; // 1 = default, "infinite" = loop forever
   direction?: "normal" | "reverse" | "alternate" | "alternate-reverse";
+  fillMode?: "none" | "forwards" | "backwards" | "both";
 }
 
 // ── Custom keyframe animation authoring ────────────────────
@@ -74,8 +75,22 @@ interface BaseObject {
   rotation?: number; // degrees
   hidden?: boolean; // visibility toggle (layers panel)
   locked?: boolean; // lock position/selection (layers panel)
+  animOrder?: number; // wave index for stagger: 0 = first to enter / last to exit
   blendMode?: string; // CSS mix-blend-mode e.g. "multiply", "soft-light"
   cssFilter?: CSSFilterConfig;
+}
+
+export interface DefaultTypography {
+  fontFamily?: string;
+  size: number;
+  fontWeight: string;
+  color: string;
+  letterSpacing: number;
+  lineHeight: number;
+  textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+  italic?: boolean;
+  underline?: boolean;
+  textAlign?: "left" | "center" | "right";
 }
 
 export interface TextObject extends BaseObject {
@@ -94,8 +109,10 @@ export interface TextObject extends BaseObject {
   letterSpacing?: number; // px
   lineHeight?: number; // multiplier, e.g. 1.2
   textAlign?: "left" | "center" | "right";
+  direction?: "ltr" | "rtl";
   italic?: boolean;
   underline?: boolean;
+  textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
 }
 
 export interface ImageObject extends BaseObject {
@@ -116,6 +133,15 @@ export interface AnswerGroupObject extends BaseObject {
   btnRadius: number;
   textColor: string;
   fontSize: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  italic?: boolean;
+  underline?: boolean;
+  textAlign?: "left" | "center" | "right";
+  direction?: "ltr" | "rtl";
+  letterSpacing?: number;
+  lineHeight?: number;
+  textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
 }
 
 export interface ShapeObject extends BaseObject {
@@ -126,7 +152,11 @@ export interface ShapeObject extends BaseObject {
   fill: string;
   stroke?: string;
   strokeWidth?: number;
-  radius?: number; // border-radius for rect
+  radius?: number; // border-radius for rect (uniform)
+  radiusTopLeft?: number;
+  radiusTopRight?: number;
+  radiusBottomRight?: number;
+  radiusBottomLeft?: number;
 }
 
 export interface DividerObject extends BaseObject {
@@ -137,12 +167,26 @@ export interface DividerObject extends BaseObject {
   lineStyle?: "solid" | "dashed" | "dotted";
 }
 
+export interface PathObject extends BaseObject {
+  type: "path";
+  /** Raw SVG path `d` attribute, e.g. "M 10 10 L 200 80 Z" */
+  d: string;
+  /** Bounding box – used for x/y positioning (the path points are absolute) */
+  w: number;
+  h: number;
+  stroke?: string;
+  strokeWidth?: number;
+  fill?: string;
+  closed?: boolean; // whether the path is closed (shows fill)
+}
+
 export type FrameObject =
   | TextObject
   | ImageObject
   | AnswerGroupObject
   | ShapeObject
-  | DividerObject;
+  | DividerObject
+  | PathObject;
 
 export type BgImageAnimType =
   | "none"
@@ -168,13 +212,22 @@ export interface Frame {
   animEnter: AnimConfig;
   animExit: AnimConfig;
   answerStagger: number;
+  enterStagger?: number; // ms gap between each animOrder wave on enter
+  exitStagger?: number; // ms gap between each animOrder wave on exit (reversed)
   bgColor?: string;
   bgGradient?: { angle: number; stops: [string, string] } | null;
   bgImage?: string | null; // per-frame background image (object-fit: cover)
   bgImageAnim?: BgImageAnim | null; // animation applied to the bg image
+  bgImageSize?: "cover" | "contain" | "auto" | string; // object-fit / background-size
+  bgImagePosX?: number; // bg position X offset (%)
+  bgImagePosY?: number; // bg position Y offset (%)
+  locale?: string; // set on duplicated frames to identify their language row
 }
 
 export interface QuizData {
   bg: string | null;
   frames: Frame[];
+  customCss?: string;
+  /** locale → objectId → translated text */
+  translations?: Record<string, Record<string, string>>;
 }

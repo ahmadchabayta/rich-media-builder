@@ -10,6 +10,7 @@ import { FrameObjectEl } from "@src/components/canvas/FrameObject";
 import { useDragContext } from "@src/context/DragContext";
 import { useQuizStore } from "@src/store/quizStore";
 import { FrameBackground } from "./FrameBackground";
+import { PenCanvas } from "@src/components/canvas/PenCanvas";
 
 interface Props {
   frame: Frame;
@@ -27,7 +28,11 @@ export function FrameCard({ frame, index }: Props) {
   const setBg = useQuizStore((s) => s.setBg);
   const showRuler = useQuizStore((s) => s.showRuler);
   const showGrid = useQuizStore((s) => s.showGrid);
+  const showCursorLines = useQuizStore((s) => s.showCursorLines);
   const playback = useQuizStore((s) => s.playback);
+  const penMode = useQuizStore((s) => s.penMode);
+  const setPenMode = useQuizStore((s) => s.setPenMode);
+  const addObject = useQuizStore((s) => s.addObject);
 
   const isActive = index === currentPreviewIndex;
 
@@ -121,6 +126,7 @@ export function FrameCard({ frame, index }: Props) {
         frame={frame}
         showRuler={showRuler}
         showGrid={showGrid}
+        showCursorLines={showCursorLines}
         onCanvasClick={(e) => {
           if ((e.target as HTMLElement).closest("[data-obj-id]")) return;
           setActiveFrame(index);
@@ -151,6 +157,18 @@ export function FrameCard({ frame, index }: Props) {
             zIndex: 50,
           }}
         />
+
+        {penMode && isActive && (
+          <PenCanvas
+            frameW={frame.w}
+            frameH={frame.h}
+            onCommit={(pathObj) => {
+              addObject(index, pathObj);
+              setPenMode(false);
+            }}
+            onCancel={() => setPenMode(false)}
+          />
+        )}
       </RuledCanvas>
 
       {/* SE resize grip */}

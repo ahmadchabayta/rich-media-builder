@@ -1,12 +1,15 @@
 import { useEffect } from "react";
-import { useQuizStore } from "@src/store/quizStore";
+import { useQuizStore, type ProjectSnapshot } from "@src/store/quizStore";
+import { notifications } from "@mantine/notifications";
 
 /**
  * Global keyboard shortcuts for the BLS Producer.
- * Handles undo/redo, duplicate, copy/paste, arrow nudge, shift-resize hint, and delete.
+ * Handles undo/redo, duplicate, copy/paste, arrow nudge, shift-resize hint,
+ * delete, save, export, new project, sidebar toggle.
  */
 export function useKeyboardShortcuts(
   boardContainerRef: React.RefObject<HTMLDivElement | null>,
+  actions?: { exportQuiz?: () => void },
 ) {
   useEffect(() => {
     const isEditable = () => {
@@ -16,6 +19,86 @@ export function useKeyboardShortcuts(
 
     const onKeyDown = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
+
+      // ── Save to file (Ctrl+S) ──
+      if (mod && e.key === "s") {
+        e.preventDefault();
+        const {
+          quizData,
+          defaultW: dw,
+          defaultH: dh,
+          currentPreviewIndex: idx,
+          markSaved,
+        } = useQuizStore.getState();
+        const snapshot: ProjectSnapshot = {
+          version: 1,
+          quizData,
+          defaultW: dw,
+          defaultH: dh,
+          currentPreviewIndex: idx,
+        };
+        const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bls-project.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        markSaved();
+        notifications.show({
+          title: "Saved",
+          message: "Project saved to file.",
+          color: "teal",
+          autoClose: 2000,
+        });
+        return;
+      }
+
+      // ── Export (Ctrl+E) ──
+      if (mod && e.key === "e") {
+        e.preventDefault();
+        actions?.exportQuiz?.();
+        return;
+      }
+
+      // ── New project (Ctrl+N) ──
+      if (mod && e.key === "n") {
+        e.preventDefault();
+        if (
+          !window.confirm(
+            "Start a new project? All unsaved changes will be lost.",
+          )
+        )
+          return;
+        const { defaultW, defaultH, loadProject, setCloudProjectId } =
+          useQuizStore.getState();
+        const blank: ProjectSnapshot = {
+          version: 1,
+          quizData: { bg: null, frames: [] },
+          defaultW,
+          defaultH,
+          currentPreviewIndex: 0,
+        };
+        loadProject(blank);
+        setCloudProjectId(null);
+        notifications.show({
+          title: "New project",
+          message: "Started a blank project.",
+          color: "teal",
+          autoClose: 2500,
+        });
+        return;
+      }
+
+      // ── Toggle timeline (Ctrl+Shift+T) ──
+      if (mod && e.shiftKey && e.key === "T") {
+        e.preventDefault();
+        const state = useQuizStore.getState();
+        state.setTimelineOpen(!state.timelineOpen);
+        return;
+      }
 
       // Undo / Redo
       if (mod && e.key === "z" && !e.shiftKey) {

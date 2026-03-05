@@ -37,6 +37,7 @@ interface Props {
 export function TemplateGallery({ opened, onClose }: Props) {
   const [activeCategory, setActiveCategory] = useState("all");
   const loadProject = useQuizStore((s) => s.loadProject);
+  const addFrame = useQuizStore((s) => s.addFrame);
 
   const filtered =
     activeCategory === "all"
@@ -52,6 +53,30 @@ export function TemplateGallery({ opened, onClose }: Props) {
       return;
     loadProject(tpl.snapshot);
     onClose();
+  };
+
+  const handleDuplicate = (tpl: Template) => {
+    const frames = tpl.snapshot.quizData?.frames;
+    if (!frames || frames.length === 0) return;
+    for (const frame of frames) {
+      // Give each frame + objects new IDs to avoid collisions
+      const newFrame = JSON.parse(JSON.stringify(frame));
+      newFrame.id = String(Date.now() + Math.random());
+      for (const obj of newFrame.objects) {
+        obj.id = String(Date.now() + Math.random());
+      }
+      addFrame(newFrame);
+    }
+    onClose();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    import("@mantine/notifications").then(({ notifications }) =>
+      notifications.show({
+        title: "Template duplicated",
+        message: `Added ${frames.length} frame${frames.length !== 1 ? "s" : ""} to your project.`,
+        color: "teal",
+        autoClose: 3000,
+      }),
+    );
   };
 
   return (
@@ -141,7 +166,12 @@ export function TemplateGallery({ opened, onClose }: Props) {
         spacing="md"
       >
         {filtered.map((tpl) => (
-          <TemplateCard key={tpl.id} tpl={tpl} onUse={handleUse} />
+          <TemplateCard
+            key={tpl.id}
+            tpl={tpl}
+            onUse={handleUse}
+            onDuplicate={handleDuplicate}
+          />
         ))}
       </SimpleGrid>
 

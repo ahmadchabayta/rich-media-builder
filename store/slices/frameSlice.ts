@@ -1,6 +1,82 @@
-import type { Frame } from "@src/lib/types";
+import type {
+  Frame,
+  FrameObject,
+  TextObject,
+  AnswerGroupObject,
+} from "@src/lib/types";
 import type { SliceSet, SliceGet } from "../types";
 import { makeId, makeDefaultFrame } from "../types";
+import {
+  RTL_LOCALES,
+  EASTERN_DIGIT_LOCALES,
+  toEasternDigits,
+} from "@src/lib/localeUtils";
+
+function applyLocaleToFrame(
+  src: Frame,
+  localeMap: Record<string, string>,
+  isRtl: boolean,
+  locale: string,
+): Frame {
+  const objects: FrameObject[] = src.objects.map((obj) => {
+    const clone: FrameObject = JSON.parse(JSON.stringify(obj));
+    clone.id = makeId();
+    if (clone.type === "text") {
+      const t = clone as TextObject;
+      let translated: string | undefined = localeMap[obj.id];
+      // Reject corrupt translation: original is numeric but translation has no digits
+      const origText = (obj as TextObject).text ?? "";
+      if (
+        translated &&
+        /^\d[\d\s/.,:]*$/.test(origText.trim()) &&
+        !/[\d\u0660-\u0669]/.test(translated)
+      ) {
+        translated = undefined;
+      }
+      if (translated) t.text = translated;
+      // Auto-convert Latin digits → Eastern Arabic for AR/FA/UR
+      if (EASTERN_DIGIT_LOCALES.has(locale) && t.text) {
+        t.text = toEasternDigits(t.text);
+      }
+      if (isRtl) {
+        t.direction = "rtl";
+        if (t.textAlign === "left" || t.textAlign == null) {
+          t.textAlign = "right";
+        }
+      }
+    } else if (clone.type === "answerGroup") {
+      const ag = clone as AnswerGroupObject;
+      ag.answers = ag.answers.map((ans, i) => {
+        const originalAns = (obj as AnswerGroupObject).answers[i];
+        let translated = originalAns ? localeMap[originalAns.id] : undefined;
+        // Reject corrupt translation: original is numeric but translation has no digits
+        const origAnsText = originalAns?.text ?? "";
+        if (
+          translated &&
+          /^\d[\d\s/.,:]*$/.test(origAnsText.trim()) &&
+          !/[\d\u0660-\u0669]/.test(translated)
+        ) {
+          translated = undefined;
+        }
+        // Auto-convert Latin digits → Eastern Arabic for AR/FA/UR
+        if (EASTERN_DIGIT_LOCALES.has(locale) && (translated ?? ans.text)) {
+          const txt = translated ?? ans.text ?? "";
+          const converted = toEasternDigits(txt);
+          if (converted !== txt) translated = converted;
+        }
+        return translated ? { ...ans, text: translated } : ans;
+      });
+      if (isRtl) {
+        ag.direction = "rtl";
+        if (ag.textAlign === "left" || ag.textAlign == null) {
+          ag.textAlign = "right";
+        }
+      }
+    }
+    return clone;
+  });
+  return { ...JSON.parse(JSON.stringify(src)), id: makeId(), locale, objects };
+}
 
 export const frameSlice = (set: SliceSet, get: SliceGet) => ({
   // ── State ────────────────────────────────────────────────────────────────────
@@ -122,6 +198,55 @@ export const frameSlice = (set: SliceSet, get: SliceGet) => ({
         quizData: { ...s.quizData, frames },
         currentPreviewIndex: frameIndex + 1,
         selectedObjectId: null,
+      };
+    });
+  },
+
+  // ── Translations ─────────────────────────────────────────────────────────────
+
+  setTranslation: (locale: string, objId: string, text: string) =>
+    set((s) => {
+      const prev = s.quizData.translations ?? {};
+      const localeMap = { ...(prev[locale] ?? {}) };
+      if (text === "") {
+        delete localeMap[objId];
+      } else {
+        localeMap[objId] = text;
+      }
+      return {
+        quizData: {
+          ...s.quizData,
+          translations: { ...prev, [locale]: localeMap },
+        },
+      };
+    }),
+
+  removeTranslationLocale: (locale: string) =>
+    set((s) => {
+      const prev = { ...(s.quizData.translations ?? {}) };
+      delete prev[locale];
+      return { quizData: { ...s.quizData, translations: prev } };
+    }),
+
+  duplicateFramesAsLocale: (locale: string) => {
+    get().snapshot();
+    set((s) => {
+      const localeMap = s.quizData.translations?.[locale] ?? {};
+      const isRtl = RTL_LOCALES.has(locale.toLowerCase());
+      // Keep only non-locale originals + frames for OTHER locales
+      const kept = s.quizData.frames.filter(
+        (f) => !f.locale || f.locale !== locale,
+      );
+      const originals = s.quizData.frames.filter((f) => !f.locale);
+      const cloned = originals.map((f) =>
+        applyLocaleToFrame(f, localeMap, isRtl, locale),
+      );
+      const frames = [...kept, ...cloned];
+      return {
+        quizData: { ...s.quizData, frames },
+        currentPreviewIndex: kept.length,
+        selectedObjectId: null,
+        selectedObjectIds: [],
       };
     });
   },

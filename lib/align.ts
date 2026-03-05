@@ -111,3 +111,100 @@ export function spreadObjsV(
     newY.has(o.id) ? { ...o, y: newY.get(o.id)! } : o,
   );
 }
+
+// ── Multi-select alignment (Photoshop-style) ─────────────────────────────
+
+/** Align selected objects' left edges to the leftmost object. */
+export function alignLeft(
+  objects: FrameObject[],
+  ids: string[],
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+  const minX = Math.min(...targets.map((o) => o.x ?? 0));
+  return objects.map((o) => (ids.includes(o.id) ? { ...o, x: minX } : o));
+}
+
+/** Align selected objects' right edges to the rightmost object. */
+export function alignRight(
+  objects: FrameObject[],
+  ids: string[],
+  boardContainer: HTMLElement | null = null,
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+  const rightEdges = targets.map(
+    (o) => (o.x ?? 0) + getObjDimensions(o, boardContainer).w,
+  );
+  const maxRight = Math.max(...rightEdges);
+  return objects.map((o) => {
+    if (!ids.includes(o.id)) return o;
+    const w = getObjDimensions(o, boardContainer).w;
+    return { ...o, x: Math.round(maxRight - w) };
+  });
+}
+
+/** Align selected objects' top edges to the topmost object. */
+export function alignTop(objects: FrameObject[], ids: string[]): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+  const minY = Math.min(...targets.map((o) => o.y ?? 0));
+  return objects.map((o) => (ids.includes(o.id) ? { ...o, y: minY } : o));
+}
+
+/** Align selected objects' bottom edges to the bottommost object. */
+export function alignBottom(
+  objects: FrameObject[],
+  ids: string[],
+  boardContainer: HTMLElement | null = null,
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+  const bottomEdges = targets.map(
+    (o) => (o.y ?? 0) + getObjDimensions(o, boardContainer).h,
+  );
+  const maxBottom = Math.max(...bottomEdges);
+  return objects.map((o) => {
+    if (!ids.includes(o.id)) return o;
+    const h = getObjDimensions(o, boardContainer).h;
+    return { ...o, y: Math.round(maxBottom - h) };
+  });
+}
+
+/** Align selected objects' horizontal centres to the average centre. */
+export function alignCenterH(
+  objects: FrameObject[],
+  ids: string[],
+  boardContainer: HTMLElement | null = null,
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+  const centres = targets.map(
+    (o) => (o.x ?? 0) + getObjDimensions(o, boardContainer).w / 2,
+  );
+  const avgCentre = centres.reduce((a, b) => a + b, 0) / centres.length;
+  return objects.map((o) => {
+    if (!ids.includes(o.id)) return o;
+    const w = getObjDimensions(o, boardContainer).w;
+    return { ...o, x: Math.round(avgCentre - w / 2) };
+  });
+}
+
+/** Align selected objects' vertical centres to the average centre. */
+export function alignCenterV(
+  objects: FrameObject[],
+  ids: string[],
+  boardContainer: HTMLElement | null = null,
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+  const centres = targets.map(
+    (o) => (o.y ?? 0) + getObjDimensions(o, boardContainer).h / 2,
+  );
+  const avgCentre = centres.reduce((a, b) => a + b, 0) / centres.length;
+  return objects.map((o) => {
+    if (!ids.includes(o.id)) return o;
+    const h = getObjDimensions(o, boardContainer).h;
+    return { ...o, y: Math.round(avgCentre - h / 2) };
+  });
+}

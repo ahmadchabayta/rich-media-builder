@@ -44,9 +44,14 @@ export function AdPreviewModal({ opened, onClose }: Props) {
       return;
     }
     // Always read imperatively from the store for the freshest possible data
-    const { quizData, defaultW: dw, defaultH: dh } = useQuizStore.getState();
+    const {
+      quizData: _qd,
+      defaultW: dw,
+      defaultH: dh,
+      customCss,
+    } = useQuizStore.getState();
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-    const html = generateExportHtml(quizData, dw, dh);
+    const html = generateExportHtml({ ..._qd, customCss }, dw, dh);
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     blobUrlRef.current = url;
@@ -88,9 +93,14 @@ export function AdPreviewModal({ opened, onClose }: Props) {
 
   const handleRestart = () => {
     // Re-generate a fresh blob from the latest store state
-    const { quizData, defaultW: dw, defaultH: dh } = useQuizStore.getState();
+    const {
+      quizData: _qd2,
+      defaultW: dw,
+      defaultH: dh,
+      customCss,
+    } = useQuizStore.getState();
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-    const html = generateExportHtml(quizData, dw, dh);
+    const html = generateExportHtml({ ..._qd2, customCss }, dw, dh);
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     blobUrlRef.current = url;

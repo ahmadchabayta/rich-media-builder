@@ -71,6 +71,29 @@ export const objectSlice = (set: SliceSet, get: SliceGet) => ({
     });
   },
 
+  copyObjectToAllFrames: (frameIndex: number, objId: string) => {
+    get().snapshot();
+    set((s) => {
+      const srcFrame = s.quizData.frames[frameIndex];
+      if (!srcFrame) return {};
+      const src = srcFrame.objects.find((o) => o.id === objId);
+      if (!src) return {};
+      const frames = s.quizData.frames.map((f, i) => {
+        if (i === frameIndex) return f; // already has it
+        // Remove any existing copy with the same label to avoid duplicates on repeated clicks
+        const filtered = f.objects.filter(
+          (o) => !(o.label === src.label && o.type === src.type),
+        );
+        const clone: FrameObject = {
+          ...JSON.parse(JSON.stringify(src)),
+          id: makeId(),
+        };
+        return { ...f, objects: [...filtered, clone] };
+      });
+      return { quizData: { ...s.quizData, frames } };
+    });
+  },
+
   commitObjectPosition: (
     frameIndex: number,
     objId: string,

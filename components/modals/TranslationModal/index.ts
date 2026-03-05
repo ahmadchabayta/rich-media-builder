@@ -1,0 +1,1 @@
+export { TranslationModal } from "./TranslationModal";

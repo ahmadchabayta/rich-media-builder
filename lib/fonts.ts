@@ -112,6 +112,20 @@ export function ensureFont(family: string | undefined) {
   loadGoogleFont(family, def?.weights);
 }
 
+/**
+ * Inject a @font-face rule from a data-URL (for uploaded/persisted custom fonts).
+ * Idempotent — safe to call multiple times for the same family.
+ */
+export function injectCustomFontFace(family: string, src: string) {
+  if (typeof document === "undefined") return;
+  const id = `custfont-${family.replace(/\s/g, "-")}`;
+  if (document.getElementById(id)) return;
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = `@font-face{font-family:'${family}';src:url('${src}');}`;
+  document.head.appendChild(style);
+}
+
 // ── Legacy select data (used nowhere new, kept for back-compat) ────────────
 
 /** @deprecated Use FontFamilySelect component instead. */

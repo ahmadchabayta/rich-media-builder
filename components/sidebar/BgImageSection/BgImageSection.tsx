@@ -8,6 +8,8 @@ import {
   Group,
   ActionIcon,
   Box,
+  NumberInput,
+  SimpleGrid,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useQuizStore } from "@src/store/quizStore";
@@ -38,6 +40,9 @@ export function BgImageSection() {
   const isPerFrame = !!frame.bgImage;
   const animType: BgImageAnimType = frame.bgImageAnim?.type ?? "none";
   const animDur: number = frame.bgImageAnim?.dur ?? 8000;
+  const bgSize = frame.bgImageSize ?? "cover";
+  const bgPosX = frame.bgImagePosX ?? 50;
+  const bgPosY = frame.bgImagePosY ?? 50;
 
   function setImage(src: string) {
     updateFrameField(currentPreviewIndex, {
@@ -124,6 +129,51 @@ export function BgImageSection() {
 
       {isPerFrame && effectiveBg && (
         <>
+          <Select
+            label="Size"
+            size="xs"
+            value={bgSize}
+            onChange={(v) =>
+              updateFrameField(currentPreviewIndex, {
+                bgImageSize: (v ?? "cover") as "cover" | "contain" | "auto",
+              })
+            }
+            data={[
+              { value: "cover", label: "Cover" },
+              { value: "contain", label: "Contain" },
+              { value: "auto", label: "Auto (original)" },
+            ]}
+          />
+
+          <SimpleGrid cols={2} spacing="xs">
+            <NumberInput
+              label="Pos X %"
+              size="xs"
+              value={bgPosX}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(v) =>
+                updateFrameField(currentPreviewIndex, {
+                  bgImagePosX: typeof v === "number" ? v : 50,
+                })
+              }
+            />
+            <NumberInput
+              label="Pos Y %"
+              size="xs"
+              value={bgPosY}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(v) =>
+                updateFrameField(currentPreviewIndex, {
+                  bgImagePosY: typeof v === "number" ? v : 50,
+                })
+              }
+            />
+          </SimpleGrid>
+
           <Select
             label="Animation"
             size="xs"

@@ -53,6 +53,9 @@ export function InlineTextEditor({
       obj.letterSpacing != null ? obj.letterSpacing + "px" : undefined,
     lineHeight: obj.lineHeight ?? 1.2,
     fontFamily: obj.fontFamily ?? undefined,
+    textTransform: (obj.textTransform && obj.textTransform !== "none"
+      ? obj.textTransform
+      : undefined) as React.CSSProperties["textTransform"],
     whiteSpace: "pre-wrap",
     opacity: opacityVal,
     transform: rotate,

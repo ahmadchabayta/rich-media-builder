@@ -10,6 +10,7 @@ import {
 } from "@mantine/core";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import type { KeyframeStop } from "@src/lib/types";
+import { TransformBuilder } from "./TransformBuilder";
 
 export const PROPERTY_OPTIONS = [
   { value: "opacity", label: "Opacity" },
@@ -105,35 +106,43 @@ export function StopEditor({
       />
 
       {entries.map(([key, val], i) => (
-        <Group key={`${key}-${i}`} gap={4} align="flex-end" wrap="nowrap">
-          <Select
-            size="xs"
-            data={PROPERTY_OPTIONS}
-            value={PROPERTY_OPTIONS.find((p) => p.value === key) ? key : null}
-            onChange={(newKey) => {
-              if (newKey) updateProp(key, newKey, val);
-            }}
-            searchable
-            allowDeselect={false}
-            style={{ flex: "0 0 110px" }}
-            styles={{ input: { fontSize: 11 } }}
-          />
-          <TextInput
-            size="xs"
-            value={val}
-            onChange={(e) => updateProp(key, key, e.currentTarget.value)}
-            style={{ flex: 1 }}
-            styles={{ input: { fontFamily: "monospace", fontSize: 11 } }}
-          />
-          <ActionIcon
-            size="xs"
-            variant="subtle"
-            color="gray"
-            onClick={() => removeProp(key)}
-          >
-            <IconTrash size={10} />
-          </ActionIcon>
-        </Group>
+        <Stack key={`${key}-${i}`} gap={4}>
+          <Group gap={4} align="flex-end" wrap="nowrap">
+            <Select
+              size="xs"
+              data={PROPERTY_OPTIONS}
+              value={PROPERTY_OPTIONS.find((p) => p.value === key) ? key : null}
+              onChange={(newKey) => {
+                if (newKey) updateProp(key, newKey, newKey === key ? val : "");
+              }}
+              searchable
+              allowDeselect={false}
+              style={{ flex: 1 }}
+              styles={{ input: { fontSize: 11 } }}
+            />
+            <ActionIcon
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={() => removeProp(key)}
+            >
+              <IconTrash size={10} />
+            </ActionIcon>
+          </Group>
+          {key === "transform" ? (
+            <TransformBuilder
+              value={val}
+              onChange={(css) => updateProp(key, key, css)}
+            />
+          ) : (
+            <TextInput
+              size="xs"
+              value={val}
+              onChange={(e) => updateProp(key, key, e.currentTarget.value)}
+              styles={{ input: { fontFamily: "monospace", fontSize: 11 } }}
+            />
+          )}
+        </Stack>
       ))}
 
       <Button

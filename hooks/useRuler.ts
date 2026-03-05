@@ -56,27 +56,33 @@ export function drawVRuler(cvs: HTMLCanvasElement, height: number) {
   }
 }
 
-export function useRuler() {
+export function useRuler(rulerSize = 18) {
   const vLineRef = useRef<HTMLDivElement>(null);
   const hLineRef = useRef<HTMLDivElement>(null);
   const cornerRef = useRef<HTMLDivElement>(null);
 
   const handleCanvasMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = Math.round(e.clientX - rect.left);
-      const y = Math.round(e.clientY - rect.top);
+      const el = e.currentTarget;
+      const rect = el.getBoundingClientRect();
+      // CSS transform (zoom) on a parent makes getBoundingClientRect() return
+      // visual/scaled dimensions while offsetWidth/Height stay in logical CSS px.
+      // Dividing by this ratio converts screen coords → logical CSS coords.
+      const scaleX = rect.width / el.offsetWidth;
+      const scaleY = rect.height / el.offsetHeight;
+      const x = Math.round((e.clientX - rect.left) / scaleX);
+      const y = Math.round((e.clientY - rect.top) / scaleY);
       if (cornerRef.current) cornerRef.current.textContent = `${x},${y}`;
       if (vLineRef.current) {
         vLineRef.current.style.display = "block";
-        vLineRef.current.style.left = 18 + x + "px";
+        vLineRef.current.style.left = rulerSize + x + "px";
       }
       if (hLineRef.current) {
         hLineRef.current.style.display = "block";
-        hLineRef.current.style.top = 18 + y + "px";
+        hLineRef.current.style.top = rulerSize + y + "px";
       }
     },
-    [],
+    [rulerSize],
   );
 
   const handleCanvasMouseLeave = useCallback(() => {

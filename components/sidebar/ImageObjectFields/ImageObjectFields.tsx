@@ -1,26 +1,11 @@
-﻿import { SimpleGrid, NumberInput } from "@mantine/core";
-import type { ImageObject, FrameObject } from "@src/lib/types";
-import { n } from "../utils";
+﻿import type { ImageObject, FrameObject } from "@src/lib/types";
 
 interface Props {
   obj: ImageObject;
   updateObj: (patch: Partial<FrameObject>) => void;
 }
 
-export function ImageObjectFields({ obj, updateObj }: Props) {
-  return (
-    <SimpleGrid cols={2} spacing="xs">
-      <NumberInput
-        label="Width"
-        value={obj.w ?? ""}
-        onChange={(val) => updateObj({ w: n(val) })}
-      />
-      <NumberInput
-        label="Height"
-        value={obj.h ?? ""}
-        onChange={(val) => updateObj({ h: n(val) })}
-      />
-    </SimpleGrid>
-  );
+/** W/H is now handled by ObjectEditorSection. This component is a placeholder for future image-specific fields. */
+export function ImageObjectFields({ obj: _obj, updateObj: _updateObj }: Props) {
+  return null;
 }
-

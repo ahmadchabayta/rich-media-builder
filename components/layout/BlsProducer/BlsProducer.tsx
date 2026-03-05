@@ -4,25 +4,34 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, Box, Center, Loader, Text, Stack } from "@mantine/core";
 import { DragContext } from "@src/context/DragContext";
 import { useDrag } from "@src/hooks/useDrag";
+import { useExport } from "@src/hooks/useExport";
 import { useQuizStore } from "@src/store/quizStore";
 import { AppHeader } from "@src/components/layout/AppHeader";
-import { Sidebar } from "@src/components/layout/Sidebar";
+import {
+  VerticalToolbar,
+  TOOLBAR_W,
+} from "@src/components/layout/VerticalToolbar";
 import { Board } from "@src/components/canvas/Board";
 import { RightPanel } from "@src/components/layout/RightPanel";
 import { BottomPanel } from "@src/components/layout/BottomPanel";
 import { ContextMenu } from "@src/components/canvas/ContextMenu";
 import { BoardContextMenu } from "@src/components/canvas/BoardContextMenu";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
+import { injectCustomFontFace } from "@src/lib/fonts";
 
 // Layout constants — change these to resize any panel
 const HEADER_H = 56;
-const LEFT_W = 280;
 const RIGHT_W = 260;
 const BOTTOM_H = 200;
 
 export default function BlsProducer() {
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const dragHandlers = useDrag(boardContainerRef);
+  const { exportQuiz } = useExport();
+
+  // Panel visibility from store
+  const timelineOpen = useQuizStore((s) => s.timelineOpen);
+  const customFonts = useQuizStore((s) => s.customFonts);
 
   // ── Resizable right panel ────────────────────────────────────────
   const [rightW, setRightW] = useState(RIGHT_W);
@@ -74,6 +83,15 @@ export default function BlsProducer() {
     if (hydrated) ensureAtLeastOneFrame();
   }, [hydrated]);
 
+  // Restore uploaded custom fonts after rehydration
+  useEffect(() => {
+    if (!hydrated) return;
+    customFonts.forEach((cf) => {
+      if (cf.src) injectCustomFontFace(cf.family, cf.src);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
   // Unsaved-changes guard
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -84,7 +102,7 @@ export default function BlsProducer() {
   }, []);
 
   // Keyboard shortcuts
-  useKeyboardShortcuts(boardContainerRef);
+  useKeyboardShortcuts(boardContainerRef, { exportQuiz });
 
   // Hydration skeleton
   if (!hydrated) {
@@ -106,30 +124,30 @@ export default function BlsProducer() {
       <BoardContextMenu />
       <AppShell
         header={{ height: HEADER_H }}
-        navbar={{ width: LEFT_W, breakpoint: 0 }}
+        navbar={{ width: TOOLBAR_W, breakpoint: 0 }}
         aside={{ width: rightW, breakpoint: 0 }}
-        footer={{ height: BOTTOM_H }}
+        footer={{ height: timelineOpen ? BOTTOM_H : 0 }}
         style={{ height: "100vh", overflow: "hidden" }}
       >
         {/* ─── Top toolbar ─────────────────────────────────────── */}
         <AppShell.Header
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "var(--mantine-color-dark-8)",
+            background: "var(--mantine-color-dark-7)",
           }}
         >
           <AppHeader boardContainerRef={boardContainerRef} />
         </AppShell.Header>
 
-        {/* ─── Left — Sidebar ──────────────────────────────────── */}
+        {/* ─── Left — Vertical Toolbar ─────────────────────────── */}
         <AppShell.Navbar
           p={0}
           style={{
             overflow: "hidden",
-            borderRight: "1px solid var(--mantine-color-dark-4)",
+            border: "none",
           }}
         >
-          <Sidebar />
+          <VerticalToolbar />
         </AppShell.Navbar>
 
         {/* ─── Right — Layers / Properties ─────────────────────── */}
@@ -170,20 +188,22 @@ export default function BlsProducer() {
         </AppShell.Aside>
 
         {/* ─── Bottom — Timeline ───────────────────────────────── */}
-        <AppShell.Footer
-          style={{ borderTop: "1px solid var(--mantine-color-dark-4)" }}
-        >
-          <BottomPanel />
-        </AppShell.Footer>
+        {timelineOpen && (
+          <AppShell.Footer
+            style={{ borderTop: "1px solid var(--mantine-color-dark-4)" }}
+          >
+            <BottomPanel />
+          </AppShell.Footer>
+        )}
 
         {/* ─── Center — Canvas ─────────────────────────────────── */}
         <AppShell.Main
           style={{
             padding: 0,
             paddingTop: HEADER_H,
-            paddingLeft: LEFT_W,
+            paddingLeft: TOOLBAR_W,
             paddingRight: rightW,
-            paddingBottom: BOTTOM_H,
+            paddingBottom: timelineOpen ? BOTTOM_H : 0,
             overflow: "hidden",
             height: "100vh",
           }}

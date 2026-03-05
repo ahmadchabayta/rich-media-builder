@@ -5,10 +5,14 @@ import type {
   DividerObject,
   AnswerGroupObject,
   ImageObject,
+  DefaultTypography,
 } from "@src/lib/types";
 
 /** Create a default text object positioned by count. */
-export function createDefaultText(objectCount: number): TextObject {
+export function createDefaultText(
+  objectCount: number,
+  defaults?: DefaultTypography,
+): TextObject {
   return {
     id: makeId(),
     type: "text",
@@ -16,8 +20,16 @@ export function createDefaultText(objectCount: number): TextObject {
     text: "Edit me",
     x: 20,
     y: 20 + objectCount * 40,
-    size: 22,
-    color: "#ffffff",
+    size: defaults?.size ?? 22,
+    color: defaults?.color ?? "#ffffff",
+    fontFamily: defaults?.fontFamily,
+    fontWeight: defaults?.fontWeight,
+    letterSpacing: defaults?.letterSpacing,
+    lineHeight: defaults?.lineHeight,
+    textTransform: defaults?.textTransform,
+    italic: defaults?.italic,
+    underline: defaults?.underline,
+    textAlign: defaults?.textAlign,
   };
 }
 

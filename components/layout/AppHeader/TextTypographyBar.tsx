@@ -21,15 +21,17 @@ import type { TextObject } from "@src/lib/types";
 export function TextTypographyBar({
   obj,
   onChange,
+  showBgColor = true,
 }: {
   obj: TextObject;
   onChange: (patch: Partial<TextObject>) => void;
+  showBgColor?: boolean;
 }) {
   return (
     <Group gap={6} wrap="nowrap" align="center">
       {/* Font family */}
       <Tooltip label="Font family" withArrow openDelay={400}>
-        <div style={{ width: 152, flexShrink: 0 }}>
+        <div style={{ width: 220, flexShrink: 0 }}>
           <FontFamilySelect
             value={obj.fontFamily ?? null}
             onChange={(family) => onChange({ fontFamily: family ?? undefined })}
@@ -141,6 +143,35 @@ export function TextTypographyBar({
 
       <Divider orientation="vertical" mx={2} />
 
+      {/* Text transform */}
+      <Tooltip
+        label="Text transform (None / UPPER / lower / Title)"
+        withArrow
+        openDelay={400}
+      >
+        <Select
+          size="xs"
+          data={[
+            { value: "none", label: "Aa" },
+            { value: "uppercase", label: "AA" },
+            { value: "lowercase", label: "aa" },
+            { value: "capitalize", label: "Tt" },
+          ]}
+          value={obj.textTransform ?? "none"}
+          onChange={(v) =>
+            onChange({
+              textTransform: (v ?? "none") as NonNullable<
+                TextObject["textTransform"]
+              >,
+            })
+          }
+          style={{ width: 70, flexShrink: 0 }}
+          comboboxProps={{ width: 100 }}
+        />
+      </Tooltip>
+
+      <Divider orientation="vertical" mx={2} />
+
       {/* Letter spacing */}
       <Tooltip label="Letter spacing" withArrow openDelay={300}>
         <NumberInput
@@ -184,23 +215,24 @@ export function TextTypographyBar({
           onChange={(val) => onChange({ color: val })}
           format="rgba"
           style={{ width: 130, flexShrink: 0 }}
-          withEyeDropper={false}
+          withEyeDropper
           popoverProps={{ position: "bottom" }}
         />
       </Tooltip>
 
-      {/* Background color */}
-      <Tooltip label="Background color" withArrow openDelay={300}>
-        <ColorInput
-          size="xs"
-          value={obj.bgColor || "#000000"}
-          onChange={(val) => onChange({ bgColor: val })}
-          format="rgba"
-          style={{ width: 130, flexShrink: 0 }}
-          withEyeDropper={false}
-          popoverProps={{ position: "bottom" }}
-        />
-      </Tooltip>
+      {showBgColor && (
+        <Tooltip label="Background color" withArrow openDelay={300}>
+          <ColorInput
+            size="xs"
+            value={obj.bgColor || "#000000"}
+            onChange={(val) => onChange({ bgColor: val })}
+            format="rgba"
+            style={{ width: 130, flexShrink: 0 }}
+            withEyeDropper
+            popoverProps={{ position: "bottom" }}
+          />
+        </Tooltip>
+      )}
     </Group>
   );
 }

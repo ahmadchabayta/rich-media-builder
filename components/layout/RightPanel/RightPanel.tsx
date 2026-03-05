@@ -1,16 +1,24 @@
 "use client";
 
-import { Tabs, ScrollArea } from "@mantine/core";
+import { Tabs, ScrollArea, Stack, Divider } from "@mantine/core";
 import { IconStack2, IconAdjustments } from "@tabler/icons-react";
 import { useQuizStore } from "@src/store/quizStore";
 import { useState } from "react";
 import { ObjectEditorSection } from "@src/components/sidebar/ObjectEditorSection";
+import { BgImageSection } from "@src/components/sidebar/BgImageSection";
 import { LayersTab } from "./LayersTab";
 
 function PropertiesTab() {
+  const selectedObjectId = useQuizStore((s) => s.selectedObjectId);
   return (
     <ScrollArea h="100%" type="auto">
-      <ObjectEditorSection />
+      {selectedObjectId ? (
+        <ObjectEditorSection />
+      ) : (
+        <Stack p="md" gap="lg">
+          <BgImageSection />
+        </Stack>
+      )}
     </ScrollArea>
   );
 }
