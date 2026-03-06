@@ -2,7 +2,7 @@ import { useState, useMemo, useLayoutEffect, type CSSProperties } from "react";
 import type { FrameObject as FrameObjectType } from "@src/lib/types";
 import { useDragContext } from "@src/context/DragContext";
 import { useQuizStore } from "@src/store/quizStore";
-import { ensureFont } from "@src/lib/fonts";
+import { ensureFont, ensureFontsFromRichText } from "@src/lib/fonts";
 import {
   resolveEnterAnim,
   resolveExitAnim,
@@ -69,7 +69,10 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   const [textDivKey, setTextDivKey] = useState(0);
   const [hovered, setHovered] = useState(false);
 
-  if (obj.type === "text" && obj.fontFamily) ensureFont(obj.fontFamily);
+  if (obj.type === "text") {
+    if (obj.fontFamily) ensureFont(obj.fontFamily);
+    if (obj.richText) ensureFontsFromRichText(obj.richText);
+  }
 
   const isSelected =
     obj.id === selectedObjectId && frameIndex === currentPreviewIndex;

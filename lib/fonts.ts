@@ -113,6 +113,25 @@ export function ensureFont(family: string | undefined) {
 }
 
 /**
+ * Ensure fonts referenced in rich-text inline styles are loaded.
+ * Parses `font-family` declarations and loads the first family in each list.
+ */
+export function ensureFontsFromRichText(html: string | undefined) {
+  if (!html) return;
+  const matches = html.matchAll(/font-family\s*:\s*([^;"}]+)/gi);
+  for (const match of matches) {
+    const rawList = match[1]?.trim();
+    if (!rawList) continue;
+    const firstFamily = rawList
+      .split(",")[0]
+      .replace(/^['\"]+|['\"]+$/g, "")
+      .trim();
+    if (!firstFamily) continue;
+    ensureFont(firstFamily);
+  }
+}
+
+/**
  * Inject a @font-face rule from a data-URL (for uploaded/persisted custom fonts).
  * Idempotent — safe to call multiple times for the same family.
  */

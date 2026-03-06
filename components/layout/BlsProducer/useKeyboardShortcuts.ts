@@ -10,18 +10,60 @@ import { useConfirmDialog } from "@src/context/ConfirmDialogContext";
  */
 export function useKeyboardShortcuts(
   boardContainerRef: React.RefObject<HTMLDivElement | null>,
-  actions?: { exportQuiz?: () => void },
+  actions?: {
+    exportQuiz?: () => void;
+    isTextSessionActive?: boolean;
+    undoTextSession?: () => boolean;
+    redoTextSession?: () => boolean;
+  },
 ) {
   const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     const isEditable = () => {
-      const tag = (document.activeElement as HTMLElement)?.tagName;
+      const active = document.activeElement as HTMLElement | null;
+      const tag = active?.tagName;
       return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    };
+
+    const isTextEditingActive = () => {
+      const active = document.activeElement as HTMLElement | null;
+      const tag = active?.tagName;
+      const isFormControl =
+        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      const isContentEditable = !!active?.isContentEditable;
+      const inRichEditor = !!active?.closest?.(
+        ".bls-rich-editor, .ProseMirror",
+      );
+      const toolbarFocused = !!active?.closest?.("[data-rich-toolbar]");
+      const richEditorMounted = !!document.querySelector(".bls-rich-editor");
+
+      return (
+        isFormControl ||
+        isContentEditable ||
+        inRichEditor ||
+        toolbarFocused ||
+        richEditorMounted
+      );
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
+
+      if (actions?.isTextSessionActive || isTextEditingActive()) {
+        if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) {
+          e.preventDefault();
+          actions?.undoTextSession?.();
+        } else if (
+          mod &&
+          (e.key.toLowerCase() === "y" ||
+            (e.key.toLowerCase() === "z" && e.shiftKey))
+        ) {
+          e.preventDefault();
+          actions?.redoTextSession?.();
+        }
+        return;
+      }
 
       // ── Save to file (Ctrl+S) ──
       if (mod && e.key === "s") {

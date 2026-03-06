@@ -93,10 +93,9 @@ export function FontFamilySelect({ value, onChange }: Props) {
     const queryIsUrl = query.startsWith("http");
     if (queryIsUrl) return [];
     if (!query) return GOOGLE_FONTS.slice(0, MAX_RESULTS);
-    return GOOGLE_FONTS.filter((f) => f.family.toLowerCase().includes(query)).slice(
-      0,
-      MAX_RESULTS,
-    );
+    return GOOGLE_FONTS.filter((f) =>
+      f.family.toLowerCase().includes(query),
+    ).slice(0, MAX_RESULTS);
   }, [debouncedSearch]);
 
   const customMatches: CustomFontEntry[] = isUrl
@@ -167,6 +166,10 @@ export function FontFamilySelect({ value, onChange }: Props) {
     setSearch(e.currentTarget.value);
     combobox.openDropdown();
     combobox.updateSelectedOptionIndex();
+  };
+
+  const keepEditorSelection = (e: React.MouseEvent) => {
+    e.preventDefault();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -244,12 +247,15 @@ export function FontFamilySelect({ value, onChange }: Props) {
           />
         </Combobox.Target>
 
-        <Combobox.Dropdown>
+        <Combobox.Dropdown data-rich-toolbar-popover>
           <Combobox.Options>
             <ScrollArea.Autosize mah={300} scrollbarSize={4}>
               {/* URL mode -- single action item */}
               {isUrl && (
-                <Combobox.Option value={LOAD_URL_SENTINEL}>
+                <Combobox.Option
+                  value={LOAD_URL_SENTINEL}
+                  onMouseDown={keepEditorSelection}
+                >
                   <Group gap={6}>
                     <IconLink size={13} />
                     <Text size="xs">Load from Google Fonts URL</Text>
@@ -272,6 +278,7 @@ export function FontFamilySelect({ value, onChange }: Props) {
                       key={f}
                       value={f}
                       active={f === value}
+                      onMouseDown={keepEditorSelection}
                       style={{ fontFamily: f }}
                     >
                       {f}
@@ -289,6 +296,7 @@ export function FontFamilySelect({ value, onChange }: Props) {
                         key={f}
                         value={f}
                         active={f === value}
+                        onMouseDown={keepEditorSelection}
                         style={{ fontFamily: f }}
                       >
                         {f}
@@ -319,6 +327,7 @@ export function FontFamilySelect({ value, onChange }: Props) {
                       key={cf.id}
                       value={cf.family}
                       active={cf.family === value}
+                      onMouseDown={keepEditorSelection}
                       style={{ fontFamily: cf.family }}
                     >
                       <Group justify="space-between" gap={4}>
@@ -346,7 +355,10 @@ export function FontFamilySelect({ value, onChange }: Props) {
 
               {/* Upload font file (always at bottom) */}
               {!isUrl && (
-                <Combobox.Option value={UPLOAD_SENTINEL}>
+                <Combobox.Option
+                  value={UPLOAD_SENTINEL}
+                  onMouseDown={keepEditorSelection}
+                >
                   <Group gap={6}>
                     <IconUpload size={13} />
                     <Text size="xs" c="dimmed">

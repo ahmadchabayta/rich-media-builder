@@ -7,6 +7,7 @@ import Underline from "@tiptap/extension-underline";
 import { Color } from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
 import FontFamily from "@tiptap/extension-font-family";
+import { ensureFontsFromRichText } from "@src/lib/fonts";
 import { ExtendedTextStyle } from "@src/lib/richTextExtensions";
 import { useRichEditorContext } from "@src/context/RichEditorContext";
 import type { TextObject } from "@src/lib/types";
@@ -28,7 +29,8 @@ export function RichTextEditor({
   onCommit,
   onCancel,
 }: Props) {
-  const { setActiveEditor } = useRichEditorContext();
+  const { setActiveEditor, setSelectionRange, setLastExpandedSelectionRange } =
+    useRichEditorContext();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep a ref to the latest onCommit to avoid stale closures in cleanup
@@ -56,6 +58,10 @@ export function RichTextEditor({
   const initialContent =
     obj.richText ||
     `<p>${(obj.text || "").replace(/\n/g, "</p><p>") || ""}</p>`;
+
+  useEffect(() => {
+    ensureFontsFromRichText(initialContent);
+  }, [initialContent]);
 
   const editor = useEditor({
     extensions: [
@@ -102,7 +108,12 @@ export function RichTextEditor({
       // Stay open if click is inside the editor
       if (containerRef.current?.contains(target)) return;
       // Stay open if click is inside the typography toolbar
-      if ((target as Element).closest?.("[data-rich-toolbar]")) return;
+      if (
+        (target as Element).closest?.(
+          "[data-rich-toolbar], [data-rich-toolbar-popover]",
+        )
+      )
+        return;
       // Clicked outside — commit if dirty, then close
       console.log("[RichTextEditor] Outside click detected for obj", obj.id);
       if (dirtyRef.current && !cancelledRef.current) {
@@ -127,11 +138,44 @@ export function RichTextEditor({
     };
   }, [obj.id]);
 
-  //e
   useEffect(() => {
-    if (editor) setActiveEditor(editor);
-    return () => setActiveEditor(null);
-  }, [editor, setActiveEditor]);
+    if (editor) {
+      setActiveEditor(editor);
+      const { from, to } = editor.state.selection;
+      setSelectionRange({ from, to });
+      if (from !== to) {
+        setLastExpandedSelectionRange({ from, to });
+      }
+    }
+    return () => {
+      setActiveEditor(null);
+      setSelectionRange(null);
+      setLastExpandedSelectionRange(null);
+    };
+  }, [
+    editor,
+    setActiveEditor,
+    setLastExpandedSelectionRange,
+    setSelectionRange,
+  ]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const syncSelection = () => {
+      const { from, to } = editor.state.selection;
+      setSelectionRange({ from, to });
+      if (from !== to) {
+        setLastExpandedSelectionRange({ from, to });
+      }
+    };
+    syncSelection();
+    editor.on("selectionUpdate", syncSelection);
+    editor.on("transaction", syncSelection);
+    return () => {
+      editor.off("selectionUpdate", syncSelection);
+      editor.off("transaction", syncSelection);
+    };
+  }, [editor, setLastExpandedSelectionRange, setSelectionRange]);
 
   // Explicitly focus + select-all once the editor is ready
   // (needed because immediatelyRender:false may defer mount)

@@ -20,68 +20,69 @@ const DEFAULT_EXPORT_META: ExportMeta = {
 export const cloudSlice = (set: SliceSet, get: SliceGet) => {
   void get;
   return {
-  // ── State ────────────────────────────────────────────────────────────────────
-  cloudProjectId: null as string | null,
-  cloudProjectTitle: null as string | null,
-  cloudProjectClient: null as string | null,
-  cloudProjectLocales: [] as string[],
-  cloudProjectRegions: [] as string[],
-  lastSavedAt: null as number | null,
-  exportMeta: { ...DEFAULT_EXPORT_META } as ExportMeta,
-  customCss: "" as string,
-  assets: [] as AssetItem[],
+    // ── State ────────────────────────────────────────────────────────────────────
+    cloudProjectId: null as string | null,
+    cloudProjectTitle: null as string | null,
+    cloudProjectClient: null as string | null,
+    cloudProjectLocales: [] as string[],
+    cloudProjectRegions: [] as string[],
+    lastSavedAt: null as number | null,
+    exportMeta: { ...DEFAULT_EXPORT_META } as ExportMeta,
+    customCss: "" as string,
+    assets: [] as AssetItem[],
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
+    // ── Actions ──────────────────────────────────────────────────────────────────
 
-  setCloudProjectId: (id: string | null) => set({ cloudProjectId: id }),
+    setCloudProjectId: (id: string | null) => set({ cloudProjectId: id }),
 
-  setCloudProjectTitle: (title: string | null) =>
-    set({ cloudProjectTitle: title }),
+    setCloudProjectTitle: (title: string | null) =>
+      set({ cloudProjectTitle: title }),
 
-  setCloudProjectClient: (client: string | null) =>
-    set({ cloudProjectClient: client }),
+    setCloudProjectClient: (client: string | null) =>
+      set({ cloudProjectClient: client }),
 
-  setCloudProjectLocales: (locales: string[]) =>
-    set({ cloudProjectLocales: locales }),
+    setCloudProjectLocales: (locales: string[]) =>
+      set({ cloudProjectLocales: locales }),
 
-  setCloudProjectRegions: (regions: string[]) =>
-    set({ cloudProjectRegions: regions }),
+    setCloudProjectRegions: (regions: string[]) =>
+      set({ cloudProjectRegions: regions }),
 
-  markSaved: () => set({ isDirty: false, lastSavedAt: Date.now() }),
+    markSaved: () => set({ isDirty: false, lastSavedAt: Date.now() }),
 
-  setExportMeta: (meta: Partial<ExportMeta>) =>
-    set((s) => ({ exportMeta: { ...s.exportMeta, ...meta } })),
+    setExportMeta: (meta: Partial<ExportMeta>) =>
+      set((s) => ({ exportMeta: { ...s.exportMeta, ...meta } })),
 
-  setCustomCss: (css: string) => set({ customCss: css }),
+    setCustomCss: (css: string) => set({ customCss: css }),
 
-  addAsset: (item: AssetItem) => set((s) => ({ assets: [...s.assets, item] })),
+    addAsset: (item: AssetItem) =>
+      set((s) => ({ assets: [...s.assets, item] })),
 
-  removeAsset: (id: string) =>
-    set((s) => ({ assets: s.assets.filter((a) => a.id !== id) })),
+    removeAsset: (id: string) =>
+      set((s) => ({ assets: s.assets.filter((a) => a.id !== id) })),
 
-  loadProject: (data: ProjectSnapshot) =>
-    set({
-      quizData: data.quizData,
-      defaultW: data.defaultW ?? 320,
-      defaultH: data.defaultH ?? 480,
-      currentPreviewIndex: Math.max(
-        0,
-        Math.min(
-          data.currentPreviewIndex ?? 0,
-          (data.quizData.frames.length || 1) - 1,
+    loadProject: (data: ProjectSnapshot) =>
+      set({
+        quizData: data.quizData,
+        defaultW: data.defaultW ?? 320,
+        defaultH: data.defaultH ?? 480,
+        currentPreviewIndex: Math.max(
+          0,
+          Math.min(
+            data.currentPreviewIndex ?? 0,
+            (data.quizData.frames.length || 1) - 1,
+          ),
         ),
-      ),
-      selectedObjectId: null,
-      selectedObjectIds: [],
-      animMode: false,
-      pastSnapshots: [],
-      futureSnapshots: [],
-      isDirty: false,
-      lastSavedAt: null,
-      cloudProjectTitle: null,
-      cloudProjectClient: null,
-      cloudProjectLocales: [],
-      cloudProjectRegions: [],
-    }),
+        selectedObjectId: null,
+        selectedObjectIds: [],
+        animMode: false,
+        pastSnapshots: [],
+        futureSnapshots: [],
+        isDirty: false,
+        lastSavedAt: null,
+        cloudProjectTitle: null,
+        cloudProjectClient: null,
+        cloudProjectLocales: [],
+        cloudProjectRegions: [],
+      }),
   };
 };

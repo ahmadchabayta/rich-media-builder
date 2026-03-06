@@ -38,6 +38,7 @@ import { AppHeaderMenuBar } from "./AppHeaderMenuBar";
 import { AlignDistributeBar } from "./AlignDistributeBar";
 import { FrameSizeSection } from "@src/components/sidebar/FrameSizeSection";
 import { useExport } from "@src/hooks/useExport";
+import { useRichEditorContext } from "@src/context/RichEditorContext";
 
 function formatAgo(ts: number): string {
   const secs = Math.floor((Date.now() - ts) / 1000);
@@ -64,6 +65,8 @@ export function AppHeader({ boardContainerRef }: Props) {
   const [localProjectsOpen, setLocalProjectsOpen] = useState(false);
   const [timeAgoLabel, setTimeAgoLabel] = useState("");
   const { exportQuiz } = useExport();
+  const { isSessionActive, undoInEditor, redoInEditor } =
+    useRichEditorContext();
 
   const cloudProjectTitle = useQuizStore((s) => s.cloudProjectTitle);
   const isDirty = useQuizStore((s) => s.isDirty);
@@ -77,10 +80,26 @@ export function AppHeader({ boardContainerRef }: Props) {
   const updateObject = useQuizStore((s) => s.updateObject);
   const defaultTypography = useQuizStore((s) => s.defaultTypography);
   const setDefaultTypography = useQuizStore((s) => s.setDefaultTypography);
-  const undo = useQuizStore((s) => s.undo);
-  const redo = useQuizStore((s) => s.redo);
+  const undoStore = useQuizStore((s) => s.undo);
+  const redoStore = useQuizStore((s) => s.redo);
   const canUndo = useQuizStore((s) => s.pastSnapshots.length > 0);
   const canRedo = useQuizStore((s) => s.futureSnapshots.length > 0);
+
+  const undo = () => {
+    if (isSessionActive) {
+      undoInEditor();
+      return;
+    }
+    undoStore();
+  };
+
+  const redo = () => {
+    if (isSessionActive) {
+      redoInEditor();
+      return;
+    }
+    redoStore();
+  };
 
   const selectedObject = useMemo(() => {
     const frame = frames[currentPreviewIndex];
@@ -331,7 +350,7 @@ export function AppHeader({ boardContainerRef }: Props) {
           <ActionIcon
             variant="default"
             size="sm"
-            disabled={!canUndo}
+            disabled={!isSessionActive && !canUndo}
             onClick={undo}
           >
             <IconArrowBackUp size={14} />
@@ -341,7 +360,7 @@ export function AppHeader({ boardContainerRef }: Props) {
           <ActionIcon
             variant="default"
             size="sm"
-            disabled={!canRedo}
+            disabled={!isSessionActive && !canRedo}
             onClick={redo}
           >
             <IconArrowForwardUp size={14} />

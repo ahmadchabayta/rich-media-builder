@@ -29,13 +29,16 @@ export function TextTypographyBar({
   onChange: (patch: Partial<TextObject>) => void;
   showBgColor?: boolean;
 }) {
-  const { activeEditor } = useRichEditorContext();
+  const { activeEditor, applyTextPatch } = useRichEditorContext();
 
   // Re-render whenever the editor''s selection / marks change
   const [, rerender] = useState(0);
   useEffect(() => {
     if (!activeEditor) return;
-    const tick = () => rerender((n) => n + 1);
+    const tick = () => {
+      rerender((n) => n + 1);
+    };
+    tick();
     activeEditor.on("selectionUpdate", tick);
     activeEditor.on("transaction", tick);
     return () => {
@@ -75,47 +78,13 @@ export function TextTypographyBar({
   const effColor = (ts?.color as string | undefined) ?? obj.color;
   const effBgColor = (ts?.backgroundColor as string | undefined) ?? obj.bgColor;
 
-  // Route a patch to the editor (per-selection) or the object (whole object)
+  // Route a patch to editor selection when rich editing is active; otherwise object-level
   const apply = (patch: Partial<TextObject>) => {
     if (!activeEditor) {
       onChange(patch);
       return;
     }
-    // Per-selection inline style overrides via textStyle mark
-    const markPatch: Record<string, unknown> = {};
-    if (patch.fontFamily !== undefined)
-      markPatch.fontFamily = patch.fontFamily ?? null;
-    if (patch.size !== undefined) markPatch.fontSize = patch.size;
-    if (patch.fontWeight !== undefined) markPatch.fontWeight = patch.fontWeight;
-    if (patch.italic !== undefined)
-      markPatch.fontStyle = patch.italic ? "italic" : null;
-    if (patch.underline !== undefined)
-      markPatch.textDecorationLine = patch.underline ? "underline" : null;
-    if (patch.letterSpacing !== undefined)
-      markPatch.letterSpacing = patch.letterSpacing;
-    if (patch.textTransform !== undefined)
-      markPatch.textTransform =
-        patch.textTransform === "none" ? null : (patch.textTransform ?? null);
-    if (patch.color !== undefined) markPatch.color = patch.color;
-    if (patch.bgColor !== undefined) markPatch.backgroundColor = patch.bgColor;
-
-    // Merge with existing mark attributes so we don't wipe other inline styles.
-    // Do NOT call .focus() here — it steals DOM focus from toolbar popovers
-    // (e.g. ColorInput), causing them to close on every change.
-    let chain = activeEditor.chain();
-    if (Object.keys(markPatch).length > 0) {
-      const existing = activeEditor.getAttributes("textStyle") as Record<
-        string,
-        unknown
-      >;
-      chain = chain.setMark("textStyle", { ...existing, ...markPatch });
-    }
-    // Paragraph-level: text alignment
-    if (patch.textAlign !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      chain = (chain as any).setTextAlign(patch.textAlign);
-    }
-    chain.run();
+    applyTextPatch(patch);
   };
 
   return (

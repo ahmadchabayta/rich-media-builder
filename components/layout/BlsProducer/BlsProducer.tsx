@@ -21,6 +21,7 @@ import { BoardContextMenu } from "@src/components/canvas/BoardContextMenu";
 import { ConfirmDialogProvider } from "@src/context/ConfirmDialogContext";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { injectCustomFontFace } from "@src/lib/fonts";
+import type { TextObject } from "@src/lib/types";
 
 // Layout constants — change these to resize any panel
 const HEADER_H = 56;
@@ -32,6 +33,14 @@ function BlsProducerContent() {
   const dragHandlers = useDrag(boardContainerRef);
   const { exportQuiz } = useExport();
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+  const [selectionRange, setSelectionRange] = useState<{
+    from: number;
+    to: number;
+  } | null>(null);
+  const [lastExpandedSelectionRange, setLastExpandedSelectionRange] = useState<{
+    from: number;
+    to: number;
+  } | null>(null);
 
   // Panel visibility from store
   const timelineOpen = useQuizStore((s) => s.timelineOpen);
@@ -105,7 +114,91 @@ function BlsProducerContent() {
   }, []);
 
   // Keyboard shortcuts
-  useKeyboardShortcuts(boardContainerRef, { exportQuiz });
+  const applyTextPatch = useCallback(
+    (patch: Partial<TextObject>) => {
+      if (!activeEditor) return;
+
+      const docSize = activeEditor.state.doc.content.size;
+      const selectedRange =
+        selectionRange && selectionRange.from !== selectionRange.to
+          ? selectionRange
+          : lastExpandedSelectionRange;
+
+      const clamp = (v: number) => Math.max(1, Math.min(v, docSize));
+      const safeRange = selectedRange
+        ? {
+            from: clamp(selectedRange.from),
+            to: clamp(selectedRange.to),
+          }
+        : null;
+
+      const patchKeys = Object.keys(patch) as Array<keyof TextObject>;
+      if (patchKeys.length === 1 && patch.fontFamily !== undefined) {
+        let chain = activeEditor.chain().focus();
+        if (safeRange && safeRange.from <= safeRange.to) {
+          chain = chain.setTextSelection(safeRange);
+        }
+        chain = patch.fontFamily
+          ? chain.setFontFamily(patch.fontFamily)
+          : chain.unsetFontFamily();
+        chain.run();
+        return;
+      }
+
+      let chain = activeEditor.chain().focus();
+      if (safeRange && safeRange.from <= safeRange.to) {
+        chain = chain.setTextSelection(safeRange);
+      }
+
+      const markPatch: Record<string, unknown> = {};
+      if (patch.size !== undefined) markPatch.fontSize = patch.size;
+      if (patch.fontWeight !== undefined)
+        markPatch.fontWeight = patch.fontWeight;
+      if (patch.italic !== undefined)
+        markPatch.fontStyle = patch.italic ? "italic" : null;
+      if (patch.underline !== undefined)
+        markPatch.textDecorationLine = patch.underline ? "underline" : null;
+      if (patch.letterSpacing !== undefined)
+        markPatch.letterSpacing = patch.letterSpacing;
+      if (patch.textTransform !== undefined)
+        markPatch.textTransform =
+          patch.textTransform === "none" ? null : (patch.textTransform ?? null);
+      if (patch.color !== undefined) markPatch.color = patch.color;
+      if (patch.bgColor !== undefined)
+        markPatch.backgroundColor = patch.bgColor;
+
+      if (Object.keys(markPatch).length > 0) {
+        const existing = activeEditor.getAttributes("textStyle") as Record<
+          string,
+          unknown
+        >;
+        chain = chain.setMark("textStyle", { ...existing, ...markPatch });
+      }
+      if (patch.textAlign !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        chain = (chain as any).setTextAlign(patch.textAlign);
+      }
+      chain.run();
+    },
+    [activeEditor, lastExpandedSelectionRange, selectionRange],
+  );
+
+  const undoInEditor = useCallback(() => {
+    if (!activeEditor) return false;
+    return activeEditor.commands.undo();
+  }, [activeEditor]);
+
+  const redoInEditor = useCallback(() => {
+    if (!activeEditor) return false;
+    return activeEditor.commands.redo();
+  }, [activeEditor]);
+
+  useKeyboardShortcuts(boardContainerRef, {
+    exportQuiz,
+    isTextSessionActive: !!activeEditor,
+    undoTextSession: undoInEditor,
+    redoTextSession: redoInEditor,
+  });
 
   // Hydration skeleton
   if (!hydrated) {
@@ -122,7 +215,20 @@ function BlsProducerContent() {
   }
 
   return (
-    <RichEditorContext.Provider value={{ activeEditor, setActiveEditor }}>
+    <RichEditorContext.Provider
+      value={{
+        activeEditor,
+        setActiveEditor,
+        selectionRange,
+        setSelectionRange,
+        lastExpandedSelectionRange,
+        setLastExpandedSelectionRange,
+        isSessionActive: !!activeEditor,
+        applyTextPatch,
+        undoInEditor,
+        redoInEditor,
+      }}
+    >
       <DragContext.Provider value={dragHandlers}>
         <ContextMenu />
         <BoardContextMenu />
