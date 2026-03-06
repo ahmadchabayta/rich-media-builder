@@ -15,6 +15,8 @@ import { useQuizStore } from "@src/store/quizStore";
 import {
   calcCenterH,
   calcCenterV,
+  centerSelectionInFrameH,
+  centerSelectionInFrameV,
   spreadObjsH,
   spreadObjsV,
   alignLeft,
@@ -43,6 +45,17 @@ export function AlignDistributeBar({
     const frame = getActiveFrame();
     if (!frame) return;
     const ids = selectedObjectIds.length >= 1 ? selectedObjectIds : null;
+    if (ids && ids.length >= 2) {
+      updateFrameField(currentPreviewIndex, {
+        objects: centerSelectionInFrameH(
+          frame,
+          frame.objects,
+          ids,
+          boardContainerRef.current,
+        ),
+      });
+      return;
+    }
     const targets = ids
       ? frame.objects.filter((o) => ids.includes(o.id))
       : [getSelectedObject()].filter(Boolean);
@@ -57,6 +70,17 @@ export function AlignDistributeBar({
     const frame = getActiveFrame();
     if (!frame) return;
     const ids = selectedObjectIds.length >= 1 ? selectedObjectIds : null;
+    if (ids && ids.length >= 2) {
+      updateFrameField(currentPreviewIndex, {
+        objects: centerSelectionInFrameV(
+          frame,
+          frame.objects,
+          ids,
+          boardContainerRef.current,
+        ),
+      });
+      return;
+    }
     const targets = ids
       ? frame.objects.filter((o) => ids.includes(o.id))
       : [getSelectedObject()].filter(Boolean);

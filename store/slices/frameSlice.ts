@@ -221,12 +221,30 @@ export const frameSlice = (set: SliceSet, get: SliceGet) => ({
       };
     }),
 
-  removeTranslationLocale: (locale: string) =>
+  removeTranslationLocale: (locale: string) => {
+    get().snapshot();
     set((s) => {
       const prev = { ...(s.quizData.translations ?? {}) };
       delete prev[locale];
-      return { quizData: { ...s.quizData, translations: prev } };
-    }),
+
+      let frames = s.quizData.frames.filter((f) => f.locale !== locale);
+      if (frames.length === 0) {
+        frames = [makeDefaultFrame(s.defaultW, s.defaultH)];
+      }
+
+      const currentPreviewIndex = Math.max(
+        0,
+        Math.min(s.currentPreviewIndex, frames.length - 1),
+      );
+
+      return {
+        quizData: { ...s.quizData, translations: prev, frames },
+        currentPreviewIndex,
+        selectedObjectId: null,
+        selectedObjectIds: [],
+      };
+    });
+  },
 
   duplicateFramesAsLocale: (locale: string) => {
     get().snapshot();

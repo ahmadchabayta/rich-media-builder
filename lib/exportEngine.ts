@@ -1,6 +1,5 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { QuizData, CustomAnim } from "./types";
-import type { ExportMeta } from "@src/store/types";
 import { compileKeyframesCSS } from "./animCompiler";
 import { SYSTEM_FONTS } from "./fonts";
 
@@ -17,11 +16,29 @@ function collectGoogleFontLinks(quizData: QuizData): string {
     for (const obj of frame.objects) {
       if (obj.type === "text") {
         const family = (obj as any).fontFamily as string | undefined;
-        if (!family) continue;
-        if (SYSTEM_FONTS.has(family)) continue;
-        if (!needed.has(family)) needed.set(family, new Set());
-        const fw = (obj as any).fontWeight as string | undefined;
-        if (fw) needed.get(family)!.add(String(fw));
+        if (family && !SYSTEM_FONTS.has(family)) {
+          if (!needed.has(family)) needed.set(family, new Set());
+          const fw = (obj as any).fontWeight as string | undefined;
+          if (fw) needed.get(family)!.add(String(fw));
+        }
+        // Scan richText HTML for inline font-family spans
+        const richText = (obj as any).richText as string | undefined;
+        if (richText) {
+          const matches = richText.matchAll(/font-family:\s*'?([^;'"]+)'?/gi);
+          for (const m of matches) {
+            const f = m[1].trim();
+            if (f && !SYSTEM_FONTS.has(f)) {
+              if (!needed.has(f)) needed.set(f, new Set());
+            }
+          }
+          const weightMatches = richText.matchAll(/font-weight:\s*(\d+)/gi);
+          for (const m of weightMatches) {
+            // Associate weight with nearest font (heuristic: use obj's fontFamily if any)
+            if (family && !SYSTEM_FONTS.has(family)) {
+              needed.get(family)?.add(m[1]);
+            }
+          }
+        }
       } else if (obj.type === "answerGroup") {
         const family = (obj as any).fontFamily as string | undefined;
         if (!family) continue;
@@ -78,8 +95,8 @@ function normalizeAnswerSlug(text: string): string {
   return text
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
 
@@ -210,6 +227,10 @@ function buildObjectHtml(
     const gap = o.btnGap ?? 10;
     const bh = o.btnHeight ?? 44;
     const brad = o.btnRadius ?? 24;
+    const pTop = o.btnPaddingTop ?? 0;
+    const pRight = o.btnPaddingRight ?? 14;
+    const pBottom = o.btnPaddingBottom ?? 0;
+    const pLeft = o.btnPaddingLeft ?? 14;
     const color = o.textColor ?? "#fff";
     const fs = o.fontSize ?? 16;
 
@@ -222,7 +243,8 @@ function buildObjectHtml(
     let btnCss =
       `width:100%;height:${bh}px;background:${rgba};border-radius:${brad}px;` +
       `color:${color};font-size:${fs}px;font-weight:${o.fontWeight ?? "700"};` +
-      `display:flex;align-items:center;justify-content:center;overflow:hidden;` +
+      `display:flex;align-items:center;justify-content:center;` +
+      `padding:${pTop}px ${pRight}px ${pBottom}px ${pLeft}px;overflow:hidden;` +
       `pointer-events:auto;cursor:pointer;position:relative`;
     if (o.fontFamily) btnCss += `;font-family:'${o.fontFamily}',sans-serif`;
     if (o.italic) btnCss += `;font-style:italic`;
@@ -246,20 +268,31 @@ function buildObjectHtml(
         : "";
 
     const buttons = (o.answers || [])
-      .map((ans: { id?: string; text?: string; src?: string }, ai: number) => {
-        const idx = ansRef.v++;
-        const answerText = ans.text ?? `Answer ${ai + 1}`;
-        const slug = normalizeAnswerSlug(answerText);
-        const inner = ans.src
-          ? `<img src="${escAttr(ans.src)}" class="ans-img">`
-          : escText(answerText);
-        return (
-          `<div class="ans-btn" data-role="answer" data-ans-idx="${idx}" ` +
-          `data-answer="${escAttr(slug)}" data-frame-idx="${fi}"` +
-          `${hoverAttr}${clickAttr} ` +
-          `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}">${inner}</div>`
-        );
-      })
+      .map(
+        (
+          ans: {
+            id?: string;
+            text?: string;
+            src?: string;
+            dataAnswer?: string;
+          },
+          ai: number,
+        ) => {
+          const idx = ansRef.v++;
+          const answerText = ans.text ?? `Answer ${ai + 1}`;
+          const manualDataAnswer = (ans.dataAnswer ?? "").trim();
+          const slug = normalizeAnswerSlug(manualDataAnswer || answerText);
+          const inner = ans.src
+            ? `<img src="${escAttr(ans.src)}" class="ans-img">`
+            : escText(answerText);
+          return (
+            `<div class="ans-btn" data-role="answer" data-ans-idx="${idx}" ` +
+            `data-answer="${escAttr(slug)}" data-frame-idx="${fi}"` +
+            `${hoverAttr}${clickAttr} ` +
+            `data-anim-in="${dataAttr(animIn)}" data-anim-out="${dataAttr(animOut)}">${inner}</div>`
+          );
+        },
+      )
       .join("");
 
     emitInteractionCss(o, cls, cssRules, true);
@@ -280,9 +313,12 @@ function buildObjectHtml(
 
   //  shape
   if (o.type === "shape") {
+    const shapeW = Number.isFinite(o.w) ? o.w : 80;
+    const shapeH = Number.isFinite(o.h) ? o.h : 80;
+    const shapeFill = o.fill ?? "#3b82f6";
     let rule =
       `position:absolute;left:${o.x ?? 0}px;top:${o.y ?? 0}px;` +
-      `width:${o.w}px;height:${o.h}px;background:${o.fill ?? "transparent"};`;
+      `width:${shapeW}px;height:${shapeH}px;background:${shapeFill};`;
     if (o.shape === "circle") rule += "border-radius:50%;";
     else {
       const hasIndividual =
@@ -388,6 +424,7 @@ function buildObjectHtml(
   //  text
   const px = o.paddingX ?? (o.bgEnabled ? 14 : 0);
   const py = o.paddingY ?? (o.bgEnabled ? 6 : 0);
+  const hasRichText = !!o.richText;
   let rule =
     `position:absolute;` +
     `left:${o.x ?? 0}px;` +
@@ -395,7 +432,8 @@ function buildObjectHtml(
     (o.w != null ? `width:${o.w}px;` : `width:max-content;`) +
     `color:${o.color ?? "#fff"};font-size:${o.size ?? 22}px;` +
     `font-weight:${o.fontWeight ?? "700"};line-height:${o.lineHeight ?? 1.2};` +
-    `white-space:pre-wrap;pointer-events:none;`;
+    (hasRichText ? `white-space:normal;` : `white-space:pre-wrap;`) +
+    `pointer-events:none;`;
   if (o.textAlign) rule += `text-align:${o.textAlign};`;
   if (o.direction === "rtl") rule += `direction:rtl;`;
   if (o.fontFamily) rule += `font-family:'${o.fontFamily}',sans-serif;`;
@@ -417,7 +455,10 @@ function buildObjectHtml(
   emitInteractionCss(o, cls, cssRules);
 
   const ansIdx = role === "answer" ? ` data-ans-idx="${ansRef.v++}"` : "";
-  const content = escText(o.text ?? "").replace(/\n/g, "<br>");
+  // Use richText HTML directly when available; otherwise escape plain text
+  const content = o.richText
+    ? o.richText
+    : escText(o.text ?? "").replace(/\n/g, "<br>");
 
   return (
     `<div class="obj obj-txt ${cls}" data-role="${role}"${ansIdx} ` +
@@ -431,7 +472,12 @@ function buildParts(
   quizData: QuizData,
   w: number,
   h: number,
-  trackerMeta?: { creativeName: string; countryCode: string; language: string },
+  trackerMeta?: {
+    creativeName: string;
+    countryCode: string;
+    language: string;
+    endpoint: string;
+  },
 ): {
   framesHtml: string;
   bgHtml: string;
@@ -443,7 +489,7 @@ function buildParts(
   const cssRules: string[] = [
     `*,*::before,*::after{box-sizing:border-box}`,
     `body,html{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;font-family:sans-serif;background:#000}`,
-    `#ad{width:100%;height:100%;position:relative;overflow:hidden;cursor:pointer}`,
+    `#ad{width:100%;height:100%;position:relative;overflow:hidden;cursor:default}`,
     `.bg-layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}`,
     `.bg-global{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}`,
     `.fp{position:absolute;inset:0;overflow:hidden;visibility:hidden;z-index:1;pointer-events:none}`,
@@ -453,6 +499,7 @@ function buildParts(
     `.obj{position:absolute}`,
     `.obj-img{object-fit:contain;display:block;pointer-events:none}`,
     `.obj-txt{pointer-events:none}`,
+    `.obj-txt p{margin:0;padding:0}`,
     `.ans-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}`,
     `@keyframes blsFadeIn{from{opacity:0}to{opacity:1}}`,
     `@keyframes blsFadeOut{from{opacity:1}to{opacity:0}}`,
@@ -598,8 +645,12 @@ function buildParts(
   var LN="${trackerMeta.language}";
   var CC="${trackerMeta.countryCode}";
   var CN="${trackerMeta.creativeName}";
+  var TRACKER_ENDPOINT="${trackerMeta.endpoint}";
+  var script=document.currentScript;
+  var BID_ID=(script&&script.getAttribute("bid_id"))||"";
   function tracker(answer){
-    fetch("https://rm.memob.com?event="+encodeURIComponent(answer)+"&ln="+LN+"&cc="+CC+"&creativename="+CN,{method:"GET",mode:"cors"}).catch(function(e){console.log("Tracking error:",e)});
+    var url=TRACKER_ENDPOINT+"?event="+encodeURIComponent(answer)+"&ln="+encodeURIComponent(LN)+"&cc="+encodeURIComponent(CC)+"&creativename="+encodeURIComponent(CN)+"&bid_id="+BID_ID;
+    fetch(url,{method:"GET",mode:"cors"}).catch(function(e){console.log("Tracking error:",e)});
   }
 `
     : "";
@@ -626,7 +677,8 @@ ${trackerBlock}${translationsBlock}
   }
 
   function advanceFrame(){
-    if(busy||cur===total-1)return;
+    if(busy)return;
+    if(cur===total-1)return;
     busy=true;
     var ei=cur,ni=cur+1,ep=panels[ei],np=panels[ni];
     ep.classList.remove('active');ep.classList.add('exiting');
@@ -655,6 +707,7 @@ ${trackerBlock}${translationsBlock}
     // Non-answer elements with data-click
     p.querySelectorAll('[data-click]:not(.ans-btn)').forEach(function(el){
       el.addEventListener('click',function(e){
+        e.preventDefault();
         e.stopPropagation();
         var ct=el.getAttribute('data-click');
         if(!ct||ct==='none')return;
@@ -666,6 +719,7 @@ ${trackerBlock}${translationsBlock}
     // Answer buttons — per-button click anim + record answer + advance frame
     p.querySelectorAll('.ans-btn[data-role="answer"]').forEach(function(btn){
       btn.addEventListener('click',function(e){
+        e.preventDefault();
         e.stopPropagation();
         var slug=btn.getAttribute('data-answer')||'';
         var frameIdx=Number(btn.getAttribute('data-frame-idx')||0);
@@ -720,7 +774,9 @@ ${trackerBlock}${translationsBlock}
     setTimeout(cb,maxDur);
   }
 
-  document.getElementById('ad').addEventListener('click',function(){
+  document.getElementById('ad').addEventListener('click',function(e){
+    e.preventDefault();
+    e.stopPropagation();
     advanceFrame();
   });
 
@@ -739,7 +795,12 @@ export function generateExportFiles(
   quizData: QuizData,
   defaultW: number,
   defaultH: number,
-  trackerMeta?: { creativeName: string; countryCode: string; language: string },
+  trackerMeta?: {
+    creativeName: string;
+    countryCode: string;
+    language: string;
+    endpoint: string;
+  },
 ): ExportFiles {
   const { framesHtml, bgHtml, css, js, googleFontLinks } = buildParts(
     quizData,
@@ -764,7 +825,7 @@ export function generateExportFiles(
     (bgHtml ? `    ${bgHtml}\n` : ``) +
     (framesHtml ? `    ${framesHtml}\n` : ``) +
     `  </div>\n` +
-    `  <script src="ad.js"><` +
+    `  <script src="ad.js" bid_id="\${ME_BID_ID}"><` +
     `/script>\n` +
     `</body>\n` +
     `</html>`;

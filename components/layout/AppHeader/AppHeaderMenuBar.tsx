@@ -30,6 +30,7 @@ import {
 } from "@tabler/icons-react";
 import { useExport } from "@src/hooks/useExport";
 import { useQuizStore, type ProjectSnapshot } from "@src/store/quizStore";
+import { useConfirmDialog } from "@src/context/ConfirmDialogContext";
 
 interface AppHeaderMenuBarProps {
   setTemplatesOpen: (v: boolean) => void;
@@ -41,6 +42,7 @@ interface AppHeaderMenuBarProps {
   setExportSettingsOpen: (v: boolean) => void;
   setAssetBucketOpen: (v: boolean) => void;
   setTranslationOpen: (v: boolean) => void;
+  setLocalProjectsOpen: (v: boolean) => void;
 }
 
 const mbLabel = (label: string) => (
@@ -76,11 +78,13 @@ export function AppHeaderMenuBar({
   setExportSettingsOpen,
   setAssetBucketOpen,
   setTranslationOpen,
+  setLocalProjectsOpen,
 }: AppHeaderMenuBarProps) {
+  const { confirm } = useConfirmDialog();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pasteJsonOpen, setPasteJsonOpen] = useState(false);
   const [pasteJsonValue, setPasteJsonValue] = useState("");
-  const { exportQuiz, exporting } = useExport();
+  const { exporting } = useExport();
 
   const cloudProjectId = useQuizStore((s) => s.cloudProjectId);
   const snapEnabled = useQuizStore((s) => s.snapEnabled);
@@ -96,11 +100,14 @@ export function AppHeaderMenuBar({
   const loadProject = useQuizStore((s) => s.loadProject);
   const markSaved = useQuizStore((s) => s.markSaved);
 
-  const handleNewProject = () => {
-    if (
-      !window.confirm("Start a new project? All unsaved changes will be lost.")
-    )
-      return;
+  const handleNewProject = async () => {
+    const ok = await confirm({
+      title: "Start new project",
+      message: "All unsaved changes will be lost.",
+      confirmLabel: "Start new",
+      confirmColor: "red",
+    });
+    if (!ok) return;
     const { defaultW, defaultH } = useQuizStore.getState();
     const blank: ProjectSnapshot = {
       version: 1,
@@ -199,7 +206,7 @@ export function AppHeaderMenuBar({
           <Menu.Dropdown>
             <Menu.Item
               leftSection={<IconFilePlus size={14} />}
-              onClick={handleNewProject}
+              onClick={() => void handleNewProject()}
             >
               New Project
             </Menu.Item>
@@ -215,6 +222,12 @@ export function AppHeaderMenuBar({
               onClick={() => fileInputRef.current?.click()}
             >
               Open from File
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconFolderOpen size={14} />}
+              onClick={() => setLocalProjectsOpen(true)}
+            >
+              Local Projects…
             </Menu.Item>
             <Menu.Item
               leftSection={<IconClipboardText size={14} />}

@@ -14,7 +14,10 @@ type BgMode = "none" | "solid" | "gradient";
 
 export function BgFillSection() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const store = useQuizStore();
   const { currentPreviewIndex } = store;

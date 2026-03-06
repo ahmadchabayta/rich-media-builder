@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import {
+  Accordion,
   Stack,
   Group,
   Text,
@@ -9,6 +10,7 @@ import {
   ActionIcon,
   Tooltip,
   Divider,
+  Slider,
 } from "@mantine/core";
 import { IconRefresh } from "@tabler/icons-react";
 import type { CSSFilterConfig, FrameObject } from "@src/lib/types";
@@ -113,6 +115,59 @@ const BLEND_MODES = [
   "luminosity",
 ];
 
+const FILTER_PRESETS: Array<{
+  id: string;
+  label: string;
+  recommendedFor?: FrameObject["type"][];
+  patch: Partial<CSSFilterConfig>;
+}> = [
+  {
+    id: "none",
+    label: "None",
+    patch: {
+      opacity: 100,
+      brightness: 100,
+      contrast: 100,
+      saturate: 100,
+      hueRotate: 0,
+      blur: 0,
+      grayscale: 0,
+      sepia: 0,
+      invert: 0,
+    },
+  },
+  {
+    id: "headline-pop",
+    label: "Headline Pop",
+    recommendedFor: ["text", "answerGroup"],
+    patch: { brightness: 112, contrast: 120, saturate: 115 },
+  },
+  {
+    id: "cinematic",
+    label: "Cinematic",
+    recommendedFor: ["image"],
+    patch: { brightness: 92, contrast: 120, saturate: 88, sepia: 8 },
+  },
+  {
+    id: "soft-focus",
+    label: "Soft Focus",
+    recommendedFor: ["image", "shape"],
+    patch: { contrast: 92, saturate: 90, blur: 1.5 },
+  },
+  {
+    id: "high-energy",
+    label: "High Energy",
+    recommendedFor: ["image", "text", "answerGroup"],
+    patch: { brightness: 108, contrast: 128, saturate: 135 },
+  },
+  {
+    id: "mono-clean",
+    label: "Monochrome Clean",
+    recommendedFor: ["text", "image", "shape"],
+    patch: { grayscale: 100, contrast: 110, saturate: 0 },
+  },
+];
+
 interface Props {
   obj: FrameObject;
   updateObj: (patch: Partial<FrameObject>) => void;
@@ -126,6 +181,7 @@ function patchFilter(
   const next = { ...current, [key]: value };
   // If all values are at defaults, return undefined to clean up
   const isDefault =
+    (next.opacity == null || next.opacity === 100) &&
     (next.brightness == null || next.brightness === 100) &&
     (next.contrast == null || next.contrast === 100) &&
     (next.saturate == null || next.saturate === 100) &&
@@ -140,130 +196,195 @@ function patchFilter(
 export function FiltersBlendPanel({ obj, updateObj }: Props) {
   const f = obj.cssFilter ?? {};
 
+  const recommended = FILTER_PRESETS.filter(
+    (p) => p.recommendedFor && p.recommendedFor.includes(obj.type),
+  );
+  const general = FILTER_PRESETS.filter((p) => !p.recommendedFor);
+  const other = FILTER_PRESETS.filter(
+    (p) => p.recommendedFor && !p.recommendedFor.includes(obj.type),
+  );
+  const presetOptions = [...recommended, ...general, ...other].map((p) => ({
+    value: p.id,
+    label: p.label,
+  }));
+
   const set = (key: keyof CSSFilterConfig, val: number) => {
     if (isNaN(val)) return;
+    const cssFilter = patchFilter(obj.cssFilter, key, val);
     updateObj({
-      cssFilter: patchFilter(obj.cssFilter, key, val),
+      cssFilter,
+      ...(key === "opacity" ? { opacity: val } : {}),
     } as Partial<FrameObject>);
   };
 
   const resetFilters = () => {
-    updateObj({ cssFilter: undefined } as Partial<FrameObject>);
+    updateObj({ cssFilter: undefined, opacity: 100 } as Partial<FrameObject>);
+  };
+
+  const applyPreset = (presetId: string | null) => {
+    if (!presetId) return;
+    const preset = FILTER_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    const next: CSSFilterConfig = {
+      ...(obj.cssFilter ?? {}),
+      ...preset.patch,
+    };
+    updateObj({
+      cssFilter: patchFilter(next, "opacity", next.opacity ?? 100),
+      opacity: next.opacity ?? 100,
+    } as Partial<FrameObject>);
   };
 
   const hasFilter = obj.cssFilter != null;
 
   return (
-    <Stack gap="xs">
-      {/* Blend mode */}
-      <Select
-        label="Blend mode"
-        size="xs"
-        data={BLEND_MODES.map((m) => ({ value: m, label: m }))}
-        value={obj.blendMode ?? "normal"}
-        onChange={(v) =>
-          updateObj({
-            blendMode: v === "normal" ? undefined : (v ?? undefined),
-          } as Partial<FrameObject>)
-        }
-        clearable
-        placeholder="normal"
-      />
+    <Accordion
+      multiple
+      defaultValue={["effects"]}
+      variant="separated"
+      radius="sm"
+    >
+      <Accordion.Item value="effects">
+        <Accordion.Control>
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Text size="xs" fw={700} c="dimmed">
+              Effects
+            </Text>
+            {hasFilter && (
+              <Tooltip label="Reset all effects" withArrow>
+                <ActionIcon
+                  size={18}
+                  variant="subtle"
+                  color="gray"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetFilters();
+                  }}
+                >
+                  <IconRefresh size={12} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </Group>
+        </Accordion.Control>
+        <Accordion.Panel>
+          <Stack gap="xs">
+            <Select
+              label="Smart preset"
+              size="xs"
+              data={presetOptions}
+              placeholder="Choose a preset"
+              onChange={applyPreset}
+              searchable
+            />
 
-      <Divider />
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={600}>
+                Opacity
+              </Text>
+              <Slider
+                min={0}
+                max={100}
+                value={f.opacity ?? obj.opacity ?? 100}
+                onChange={(val) => set("opacity", val)}
+                label={(v) => `${v}%`}
+                size="xs"
+                marks={[{ value: 0 }, { value: 50 }, { value: 100 }]}
+              />
+            </Stack>
 
-      {/* Filter header with reset */}
-      <Group justify="space-between" align="center" gap={4}>
-        <Text size="xs" fw={600} c="dimmed">
-          CSS Filters
-        </Text>
-        {hasFilter && (
-          <Tooltip label="Reset all filters" withArrow>
-            <ActionIcon
-              size={18}
-              variant="subtle"
-              color="gray"
-              onClick={resetFilters}
-            >
-              <IconRefresh size={12} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-      </Group>
+            <Select
+              label="Blend mode"
+              size="xs"
+              data={BLEND_MODES.map((m) => ({ value: m, label: m }))}
+              value={obj.blendMode ?? "normal"}
+              onChange={(v) =>
+                updateObj({
+                  blendMode: v === "normal" ? undefined : (v ?? undefined),
+                } as Partial<FrameObject>)
+              }
+              clearable
+              placeholder="normal"
+            />
 
-      <SimpleGrid cols={2} spacing="xs">
-        <DragNumberInput
-          label="Brightness %"
-          value={f.brightness ?? 100}
-          min={0}
-          max={300}
-          step={1}
-          pxPerStep={1}
-          onChange={(v) => set("brightness", v)}
-        />
-        <DragNumberInput
-          label="Contrast %"
-          value={f.contrast ?? 100}
-          min={0}
-          max={300}
-          step={1}
-          pxPerStep={1}
-          onChange={(v) => set("contrast", v)}
-        />
-        <DragNumberInput
-          label="Saturate %"
-          value={f.saturate ?? 100}
-          min={0}
-          max={400}
-          step={1}
-          pxPerStep={1}
-          onChange={(v) => set("saturate", v)}
-        />
-        <DragNumberInput
-          label="Hue Rotate °"
-          value={f.hueRotate ?? 0}
-          min={-180}
-          max={180}
-          step={1}
-          pxPerStep={1}
-          onChange={(v) => set("hueRotate", v)}
-        />
-        <DragNumberInput
-          label="Blur px"
-          value={f.blur ?? 0}
-          min={0}
-          max={40}
-          step={0.5}
-          pxPerStep={2}
-          onChange={(v) => set("blur", v)}
-        />
-        <DragNumberInput
-          label="Grayscale %"
-          value={f.grayscale ?? 0}
-          min={0}
-          max={100}
-          step={1}
-          pxPerStep={1}
-          onChange={(v) => set("grayscale", v)}
-        />
-        <DragNumberInput
-          label="Sepia %"
-          value={f.sepia ?? 0}
-          min={0}
-          max={100}
-          step={1}
-          pxPerStep={1}
-          onChange={(v) => set("sepia", v)}
-        />
-        <DragNumberInput
-          label="Invert %"
-          value={f.invert ?? 0}
-          min={0}
-          max={100}
-          step={5}
-          onChange={(v) => set("invert", Number(v))}
-        />
-      </SimpleGrid>
-    </Stack>
+            <Divider />
+
+            <SimpleGrid cols={2} spacing="xs">
+              <DragNumberInput
+                label="Brightness %"
+                value={f.brightness ?? 100}
+                min={0}
+                max={300}
+                step={1}
+                pxPerStep={1}
+                onChange={(v) => set("brightness", v)}
+              />
+              <DragNumberInput
+                label="Contrast %"
+                value={f.contrast ?? 100}
+                min={0}
+                max={300}
+                step={1}
+                pxPerStep={1}
+                onChange={(v) => set("contrast", v)}
+              />
+              <DragNumberInput
+                label="Saturate %"
+                value={f.saturate ?? 100}
+                min={0}
+                max={400}
+                step={1}
+                pxPerStep={1}
+                onChange={(v) => set("saturate", v)}
+              />
+              <DragNumberInput
+                label="Hue Rotate °"
+                value={f.hueRotate ?? 0}
+                min={-180}
+                max={180}
+                step={1}
+                pxPerStep={1}
+                onChange={(v) => set("hueRotate", v)}
+              />
+              <DragNumberInput
+                label="Blur px"
+                value={f.blur ?? 0}
+                min={0}
+                max={40}
+                step={0.5}
+                pxPerStep={2}
+                onChange={(v) => set("blur", v)}
+              />
+              <DragNumberInput
+                label="Grayscale %"
+                value={f.grayscale ?? 0}
+                min={0}
+                max={100}
+                step={1}
+                pxPerStep={1}
+                onChange={(v) => set("grayscale", v)}
+              />
+              <DragNumberInput
+                label="Sepia %"
+                value={f.sepia ?? 0}
+                min={0}
+                max={100}
+                step={1}
+                pxPerStep={1}
+                onChange={(v) => set("sepia", v)}
+              />
+              <DragNumberInput
+                label="Invert %"
+                value={f.invert ?? 0}
+                min={0}
+                max={100}
+                step={5}
+                onChange={(v) => set("invert", Number(v))}
+              />
+            </SimpleGrid>
+          </Stack>
+        </Accordion.Panel>
+      </Accordion.Item>
+    </Accordion>
   );
 }

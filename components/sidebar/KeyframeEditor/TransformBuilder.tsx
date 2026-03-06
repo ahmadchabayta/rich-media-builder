@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  SimpleGrid,
   NumberInput,
   Select,
   Text,
@@ -42,8 +41,6 @@ function parseValue(raw: string): Parsed {
     tyUnit: "%" | "px" = "%";
   let scale = 1;
   let rotate = 0;
-  let consumed = 0;
-  const total = work.length;
 
   // Helper: extract a single number+unit from "10%" or "10px" or "10"
   const numUnit = (s: string): [number, "%" | "px"] => {
@@ -58,35 +55,30 @@ function parseValue(raw: string): Parsed {
     (_, a, b) => {
       [tx, txUnit] = numUnit(a);
       [ty, tyUnit] = numUnit(b);
-      consumed++;
       return "";
     },
   );
   work = work.replace(/translateX\(\s*(-?[\d.]+(?:%|px)?)\s*\)/g, (_, a) => {
     [tx, txUnit] = numUnit(a);
-    consumed++;
     return "";
   });
   work = work.replace(/translateY\(\s*(-?[\d.]+(?:%|px)?)\s*\)/g, (_, a) => {
     [ty, tyUnit] = numUnit(a);
-    consumed++;
     return "";
   });
   work = work.replace(/scale\(\s*(-?[\d.]+)\s*\)/g, (_, a) => {
     scale = parseFloat(a);
-    consumed++;
     return "";
   });
   work = work.replace(/rotate\(\s*(-?[\d.]+)deg\s*\)/g, (_, a) => {
     rotate = parseFloat(a);
-    consumed++;
     return "";
   });
 
   // If anything non-whitespace remains, it's advanced
   const remaining = work.replace(/\s+/g, "");
-  const advanced =
-    remaining.length > 0 && consumed < /* tokens in original */ 4;
+  // const advanced =
+  //   remaining.length > 0 && consumed < /* tokens in original */ 4;
 
   return {
     tx,
@@ -130,7 +122,10 @@ export function TransformBuilder({ value, onChange }: Props) {
 
   // Sync showRaw if prop changes externally to something advanced
   useEffect(() => {
-    if (parsed.advanced) setShowRaw(true);
+    if (parsed.advanced) {
+      const timeout = setTimeout(() => setShowRaw(true), 100); // avoid setting state during render
+      return () => clearTimeout(timeout);
+    }
   }, [parsed.advanced]);
 
   if (showRaw) {

@@ -53,7 +53,7 @@ export function applyLocaleToQuizData(
   clone.frames = clone.frames.filter((f) => !f.locale);
 
   for (const frame of clone.frames) {
-    localizeFrame(frame, localeMap, isRtl, useEastern, locale);
+    localizeFrame(frame, localeMap, isRtl, useEastern);
   }
 
   return clone;
@@ -67,7 +67,6 @@ function localizeFrame(
   localeMap: Record<string, string>,
   isRtl: boolean,
   useEastern: boolean,
-  locale: string,
 ): void {
   for (const obj of frame.objects) {
     if (obj.type === "text") {

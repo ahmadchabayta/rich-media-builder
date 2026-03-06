@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Stack, Group, Text, SegmentedControl, Select } from "@mantine/core";
 import { ANIM_IN, ANIM_OUT } from "@src/lib/animPresets";
 import type { AnimConfig, LoopAnimConfig, CustomAnim } from "@src/lib/types";
@@ -29,13 +29,7 @@ export function AnimPhaseBlock({
   const [mode, setMode] = useState<"preset" | "custom">(
     hasCustom ? "custom" : "preset",
   );
-
-  // Sync mode if customValue appears/disappears externally
-  const prevHasCustom = useRef(hasCustom);
-  if (hasCustom !== prevHasCustom.current) {
-    prevHasCustom.current = hasCustom;
-    setMode(hasCustom ? "custom" : "preset");
-  }
+  const resolvedMode = hasCustom ? "custom" : mode;
 
   const handleModeChange = (val: string) => {
     const newMode = val as "preset" | "custom";
@@ -81,7 +75,7 @@ export function AnimPhaseBlock({
             { value: "preset", label: "Preset" },
             { value: "custom", label: "Custom" },
           ]}
-          value={mode}
+          value={resolvedMode}
           onChange={handleModeChange}
           styles={{
             root: { height: 22 },
@@ -90,7 +84,7 @@ export function AnimPhaseBlock({
         />
       </Group>
 
-      {mode === "preset" && presetList && phase !== "loop" && (
+      {resolvedMode === "preset" && presetList && phase !== "loop" && (
         <AnimPanel
           label=""
           list={presetList}
@@ -99,14 +93,14 @@ export function AnimPhaseBlock({
         />
       )}
 
-      {mode === "preset" && phase === "loop" && (
+      {resolvedMode === "preset" && phase === "loop" && (
         <LoopAnimPanel
           value={presetValue as LoopAnimConfig | undefined}
           onChange={(cfg) => onPresetChange(cfg)}
         />
       )}
 
-      {mode === "custom" && customValue && (
+      {resolvedMode === "custom" && customValue && (
         <Stack gap={6}>
           <EasingPicker
             value={customValue.easing ?? "ease"}

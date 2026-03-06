@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuizStore, type ProjectSnapshot } from "@src/store/quizStore";
 import { notifications } from "@mantine/notifications";
+import { useConfirmDialog } from "@src/context/ConfirmDialogContext";
 
 /**
  * Global keyboard shortcuts for the BLS Producer.
@@ -11,6 +12,8 @@ export function useKeyboardShortcuts(
   boardContainerRef: React.RefObject<HTMLDivElement | null>,
   actions?: { exportQuiz?: () => void },
 ) {
+  const { confirm } = useConfirmDialog();
+
   useEffect(() => {
     const isEditable = () => {
       const tag = (document.activeElement as HTMLElement)?.tagName;
@@ -66,29 +69,33 @@ export function useKeyboardShortcuts(
       // ── New project (Ctrl+N) ──
       if (mod && e.key === "n") {
         e.preventDefault();
-        if (
-          !window.confirm(
-            "Start a new project? All unsaved changes will be lost.",
-          )
-        )
-          return;
-        const { defaultW, defaultH, loadProject, setCloudProjectId } =
-          useQuizStore.getState();
-        const blank: ProjectSnapshot = {
-          version: 1,
-          quizData: { bg: null, frames: [] },
-          defaultW,
-          defaultH,
-          currentPreviewIndex: 0,
-        };
-        loadProject(blank);
-        setCloudProjectId(null);
-        notifications.show({
-          title: "New project",
-          message: "Started a blank project.",
-          color: "teal",
-          autoClose: 2500,
-        });
+        void (async () => {
+          const ok = await confirm({
+            title: "Start new project",
+            message: "All unsaved changes will be lost.",
+            confirmLabel: "Start new",
+            confirmColor: "red",
+          });
+          if (!ok) return;
+
+          const { defaultW, defaultH, loadProject, setCloudProjectId } =
+            useQuizStore.getState();
+          const blank: ProjectSnapshot = {
+            version: 1,
+            quizData: { bg: null, frames: [] },
+            defaultW,
+            defaultH,
+            currentPreviewIndex: 0,
+          };
+          loadProject(blank);
+          setCloudProjectId(null);
+          notifications.show({
+            title: "New project",
+            message: "Started a blank project.",
+            color: "teal",
+            autoClose: 2500,
+          });
+        })();
         return;
       }
 
@@ -190,5 +197,5 @@ export function useKeyboardShortcuts(
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
     };
-  }, [boardContainerRef]);
+  }, [boardContainerRef, confirm, actions]);
 }

@@ -30,11 +30,17 @@ export interface ExportCountry {
   languages: string[]; // e.g. ["en", "ar"]
 }
 
+export interface ExportTrackerMeta {
+  enabled: boolean;
+  endpoint: string;
+}
+
 export interface ExportMeta {
   clientName: string; // e.g. "chuck-e-cheese"
   adName: string; // e.g. "summer-promo"
   adKind: string; // e.g. "bls"
   countries: ExportCountry[];
+  tracker: ExportTrackerMeta;
 }
 
 // ─── Shared utilities ──────────────────────────────────────────────────────────

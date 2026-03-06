@@ -62,7 +62,7 @@ export function SaveToCloudModal({ opened, onClose }: Props) {
   useEffect(() => {
     if (!opened) return;
     if (!cloudProjectId) return;
-    setMetaLoading(true);
+    const timeout = setTimeout(() => setMetaLoading(true), 100); // avoid setting state during render
     fetch(`/api/cloud/projects/${cloudProjectId}`)
       .then((r) => r.json())
       .then((doc) => {
@@ -85,7 +85,10 @@ export function SaveToCloudModal({ opened, onClose }: Props) {
       .catch(() => {
         /* keep defaults */
       })
-      .finally(() => setMetaLoading(false));
+      .finally(() => {
+        clearTimeout(timeout);
+        setMetaLoading(false);
+      });
   }, [opened, cloudProjectId]);
 
   const buildMeta = () => ({

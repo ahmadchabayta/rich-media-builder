@@ -32,6 +32,7 @@ import { AdPreviewModal } from "@src/components/modals/AdPreviewModal";
 import { ExportSettingsModal } from "@src/components/modals/ExportSettingsModal";
 import { AssetBucketModal } from "@src/components/modals/AssetBucketModal";
 import { TranslationModal } from "@src/components/modals/TranslationModal";
+import { LocalProjectsModal } from "@src/components/modals/LocalProjectsModal";
 import { TextTypographyBar } from "./TextTypographyBar";
 import { AppHeaderMenuBar } from "./AppHeaderMenuBar";
 import { AlignDistributeBar } from "./AlignDistributeBar";
@@ -60,6 +61,7 @@ export function AppHeader({ boardContainerRef }: Props) {
   const [exportSettingsOpen, setExportSettingsOpen] = useState(false);
   const [assetBucketOpen, setAssetBucketOpen] = useState(false);
   const [translationOpen, setTranslationOpen] = useState(false);
+  const [localProjectsOpen, setLocalProjectsOpen] = useState(false);
   const [timeAgoLabel, setTimeAgoLabel] = useState("");
   const { exportQuiz } = useExport();
 
@@ -70,6 +72,7 @@ export function AppHeader({ boardContainerRef }: Props) {
   const defaultH = useQuizStore((s) => s.defaultH);
   const currentPreviewIndex = useQuizStore((s) => s.currentPreviewIndex);
   const selectedObjectId = useQuizStore((s) => s.selectedObjectId);
+  const selectedObjectIds = useQuizStore((s) => s.selectedObjectIds);
   const frames = useQuizStore((s) => s.quizData.frames);
   const updateObject = useQuizStore((s) => s.updateObject);
   const defaultTypography = useQuizStore((s) => s.defaultTypography);
@@ -84,6 +87,13 @@ export function AppHeader({ boardContainerRef }: Props) {
     if (!frame || !selectedObjectId) return null;
     return frame.objects.find((o) => o.id === selectedObjectId) ?? null;
   }, [frames, currentPreviewIndex, selectedObjectId]);
+
+  const selectedObjects = useMemo(() => {
+    const frame = frames[currentPreviewIndex];
+    if (!frame || selectedObjectIds.length === 0) return [] as FrameObject[];
+    const idSet = new Set(selectedObjectIds);
+    return frame.objects.filter((o) => idSet.has(o.id));
+  }, [frames, currentPreviewIndex, selectedObjectIds]);
 
   // Refresh relative-time label every 30s
   useEffect(() => {
@@ -146,6 +156,7 @@ export function AppHeader({ boardContainerRef }: Props) {
         setExportSettingsOpen={setExportSettingsOpen}
         setAssetBucketOpen={setAssetBucketOpen}
         setTranslationOpen={setTranslationOpen}
+        setLocalProjectsOpen={setLocalProjectsOpen}
       />
 
       <Divider orientation="vertical" mx={8} />
@@ -164,13 +175,22 @@ export function AppHeader({ boardContainerRef }: Props) {
               <>
                 <TextTypographyBar
                   obj={textObj}
-                  onChange={(patch) =>
-                    updateObject(
-                      currentPreviewIndex,
-                      textObj.id,
-                      (o) => ({ ...o, ...patch }) as FrameObject,
-                    )
-                  }
+                  onChange={(patch) => {
+                    const targets = selectedObjects.filter(
+                      (o) => o.type === "text",
+                    );
+                    const ids =
+                      targets.length > 0
+                        ? targets.map((o) => o.id)
+                        : [textObj.id];
+                    ids.forEach((id) => {
+                      updateObject(
+                        currentPreviewIndex,
+                        id,
+                        (o) => ({ ...o, ...patch }) as FrameObject,
+                      );
+                    });
+                  }}
                 />
                 <Divider orientation="vertical" />
               </>
@@ -213,11 +233,19 @@ export function AppHeader({ boardContainerRef }: Props) {
                       mapped.btnBgColor = patch.bgColor;
                     if (patch.textTransform !== undefined)
                       mapped.textTransform = patch.textTransform;
-                    updateObject(
-                      currentPreviewIndex,
-                      ag.id,
-                      (o) => ({ ...o, ...mapped }) as FrameObject,
+
+                    const targets = selectedObjects.filter(
+                      (o) => o.type === "answerGroup",
                     );
+                    const ids =
+                      targets.length > 0 ? targets.map((o) => o.id) : [ag.id];
+                    ids.forEach((id) => {
+                      updateObject(
+                        currentPreviewIndex,
+                        id,
+                        (o) => ({ ...o, ...mapped }) as FrameObject,
+                      );
+                    });
                   }}
                 />
                 <Divider orientation="vertical" />
@@ -375,6 +403,10 @@ export function AppHeader({ boardContainerRef }: Props) {
       <TranslationModal
         opened={translationOpen}
         onClose={() => setTranslationOpen(false)}
+      />
+      <LocalProjectsModal
+        opened={localProjectsOpen}
+        onClose={() => setLocalProjectsOpen(false)}
       />
     </div>
   );

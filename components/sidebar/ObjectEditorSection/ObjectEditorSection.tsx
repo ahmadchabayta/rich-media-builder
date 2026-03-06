@@ -8,7 +8,6 @@ import {
   TextInput,
   NumberInput,
   SimpleGrid,
-  Slider,
   Tooltip,
   ActionIcon,
   Divider,
@@ -327,7 +326,7 @@ export function ObjectEditorSection() {
                   selectedObj.type === "text") && (
                   <NumberInput
                     label="W"
-                    value={(selectedObj as any).w ?? ""}
+                    value={selectedObj.w ?? ""}
                     min={1}
                     placeholder={
                       selectedObj.type === "text" ? "auto" : undefined
@@ -347,7 +346,7 @@ export function ObjectEditorSection() {
                   selectedObj.type === "image") && (
                   <NumberInput
                     label="H"
-                    value={(selectedObj as any).h ?? 0}
+                    value={selectedObj.h ?? 0}
                     min={1}
                     onChange={(val) =>
                       updateObj({
@@ -368,22 +367,6 @@ export function ObjectEditorSection() {
                     updateObj({ rotation: n(val) } as Partial<FrameObject>)
                   }
                 />
-                <Stack gap={2}>
-                  <Text size="xs" c="dimmed" fw={600}>
-                    Opacity
-                  </Text>
-                  <Slider
-                    min={0}
-                    max={100}
-                    value={selectedObj.opacity ?? 100}
-                    onChange={(val) =>
-                      updateObj({ opacity: val } as Partial<FrameObject>)
-                    }
-                    label={(v) => `${v}%`}
-                    size="xs"
-                    marks={[{ value: 0 }, { value: 50 }, { value: 100 }]}
-                  />
-                </Stack>
               </SimpleGrid>
 
               <Divider />

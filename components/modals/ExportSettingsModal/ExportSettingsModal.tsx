@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Modal,
   TextInput,
+  Checkbox,
   TagsInput,
   MultiSelect,
   Stack,
@@ -55,6 +56,10 @@ export function ExportSettingsModal({ opened, onClose, onExport }: Props) {
   /** Migrate persisted countries that still have the old `language: string` shape */
   const normalizeCountries = (meta: typeof exportMeta) => ({
     ...meta,
+    tracker: {
+      enabled: meta.tracker?.enabled ?? true,
+      endpoint: meta.tracker?.endpoint?.trim() || "https://rm.memob.com",
+    },
     countries: meta.countries.map((c) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const legacy = c as any;
@@ -169,17 +174,22 @@ export function ExportSettingsModal({ opened, onClose, onExport }: Props) {
     });
   };
 
+  const trackerState = localMeta.tracker ?? {
+    enabled: true,
+    endpoint: "https://rm.memob.com",
+  };
+
   const handleExport = () => {
-    setExportMeta(localMeta);
+    setExportMeta(normalizeCountries(localMeta));
     onClose();
-    // Give state time to persist
-    setTimeout(() => onExport(), 50);
+    onExport();
   };
 
   const canExport =
     localMeta.clientName.trim() &&
     localMeta.adName.trim() &&
-    localMeta.countries.every((c) => c.code.trim() && c.languages.length > 0);
+    localMeta.countries.every((c) => c.code.trim() && c.languages.length > 0) &&
+    (!trackerState.enabled || !!trackerState.endpoint.trim());
 
   // Cloud-constrained options (empty = free-form); always include "en"
   const cloudLocales = cloudProjectLocales.filter((l) => l !== "__init__");
@@ -191,12 +201,55 @@ export function ExportSettingsModal({ opened, onClose, onExport }: Props) {
         }))
       : [];
   const hasCloudRegions = cloudProjectRegions.length > 0;
+  const trackerPreviewBase =
+    trackerState.endpoint.trim() || "https://rm.memob.com";
+  const trackerPreviewRows = localMeta.countries
+    .filter((c) => c.code.trim())
+    .flatMap((c) => {
+      const cc = c.code.trim().toUpperCase();
+      return c.languages
+        .map((l) => l.trim().toLowerCase())
+        .filter(Boolean)
+        .flatMap((ln) =>
+          ["exposed", "controlled"].map((variant) => {
+            const creativeName = `${localMeta.clientName || "client"}-${localMeta.adName || "ad"}-${ln}-${variant}`;
+            const queryLines = [
+              `event=${encodeURIComponent("new-york")}`,
+              `ln=${encodeURIComponent(ln)}`,
+              `cc=${encodeURIComponent(cc)}`,
+              `creativename=${encodeURIComponent(creativeName)}`,
+              `bid_id=\${BID_ID}`,
+            ].join("\n&");
+            return {
+              id: `${cc}-${ln}-${variant}`,
+              label: `${cc} • ${ln} • ${variant}`,
+              url: `${trackerPreviewBase}?${queryLines}`,
+            };
+          }),
+        );
+    });
+
+  const folderPreviewRows =
+    localMeta.clientName.trim() && localMeta.adName.trim()
+      ? localMeta.countries
+          .filter((c) => c.code.trim())
+          .flatMap((c) => {
+            const cc = c.code.toLowerCase();
+            return c.languages
+              .map((l) => l.trim().toLowerCase())
+              .filter(Boolean)
+              .flatMap((ln) => [
+                `${localMeta.clientName}/${localMeta.adKind}-${ln}/${localMeta.adName}-exposed/${cc}/`,
+                `${localMeta.clientName}/${localMeta.adKind}-${ln}/${localMeta.adName}-controlled/${cc}/`,
+              ]);
+          })
+      : [];
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      size="lg"
+      size="xl"
       title={
         <Group gap="xs">
           <IconSettings size={18} color="var(--mantine-color-blue-4)" />
@@ -213,6 +266,8 @@ export function ExportSettingsModal({ opened, onClose, onExport }: Props) {
         body: {
           background: "var(--mantine-color-dark-8)",
           paddingTop: 16,
+          maxHeight: "78vh",
+          overflowY: "auto",
         },
         content: { background: "var(--mantine-color-dark-8)" },
       }}
@@ -225,133 +280,235 @@ export function ExportSettingsModal({ opened, onClose, onExport }: Props) {
           will produce two folders (exposed + controlled).
         </Text>
 
-        <SimpleGrid cols={2} spacing="xs">
-          <TextInput
-            label="Client Name"
-            placeholder="e.g. chuck-e-cheese"
-            size="xs"
-            value={localMeta.clientName}
-            onChange={(e) =>
-              setLocalMeta({ ...localMeta, clientName: e.currentTarget.value })
-            }
-          />
-          <TextInput
-            label="Ad Name"
-            placeholder="e.g. summer-promo"
-            size="xs"
-            value={localMeta.adName}
-            onChange={(e) =>
-              setLocalMeta({ ...localMeta, adName: e.currentTarget.value })
-            }
-          />
-        </SimpleGrid>
-
-        <TextInput
-          label="Ad Kind"
-          placeholder="e.g. bls"
-          size="xs"
-          value={localMeta.adKind}
-          onChange={(e) =>
-            setLocalMeta({ ...localMeta, adKind: e.currentTarget.value })
-          }
-          style={{ maxWidth: 200 }}
-        />
-
-        <Divider color="var(--mantine-color-dark-5)" />
-
-        <Group justify="space-between">
-          <Group gap="xs">
-            <Text size="sm" fw={600}>
-              Countries
-            </Text>
-            <Badge size="xs" variant="light" color="blue">
-              {localMeta.countries.length}
-            </Badge>
-          </Group>
-          <Button
-            size="xs"
-            variant="light"
-            leftSection={<IconPlus size={12} />}
-            onClick={addCountry}
-            style={{ display: hasCloudRegions ? "none" : undefined }}
+        <SimpleGrid cols={2} spacing="md">
+          <Stack
+            gap="md"
+            style={{
+              border: "1px solid var(--mantine-color-dark-4)",
+              borderRadius: 8,
+              padding: 10,
+              background: "var(--mantine-color-dark-7)",
+              maxHeight: "62vh",
+              overflowY: "auto",
+            }}
           >
-            Add Country
-          </Button>
-        </Group>
-
-        <Stack gap={8}>
-          {localMeta.countries.map((c, idx) => (
-            <Group key={idx} gap="xs" align="flex-end">
-              <TextInput
-                label={idx === 0 ? "Country Code" : undefined}
-                placeholder="ksa"
-                size="xs"
-                value={c.code}
-                onChange={(e) =>
-                  updateCountry(idx, { code: e.currentTarget.value })
-                }
-                style={{ flex: 1 }}
-              />
-              {localeOptions.length > 0 ? (
-                <MultiSelect
-                  label={idx === 0 ? "Language(s)" : undefined}
-                  placeholder="select..."
-                  size="xs"
-                  data={localeOptions}
-                  value={c.languages}
-                  onChange={(vals) => updateCountry(idx, { languages: vals })}
-                  style={{ flex: 2 }}
-                />
-              ) : (
-                <TagsInput
-                  label={idx === 0 ? "Language(s)" : undefined}
-                  placeholder="en"
-                  size="xs"
-                  value={c.languages}
-                  onChange={(vals) => updateCountry(idx, { languages: vals })}
-                  style={{ flex: 2 }}
-                />
-              )}
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                size="sm"
-                onClick={() => removeCountry(idx)}
-                disabled={localMeta.countries.length <= 1}
-              >
-                <IconTrash size={12} />
-              </ActionIcon>
-            </Group>
-          ))}
-        </Stack>
-
-        <Divider color="var(--mantine-color-dark-5)" />
-
-        {/* Preview folder structure */}
-        {localMeta.clientName.trim() && localMeta.adName.trim() && (
-          <Stack gap={4}>
-            <Text size="xs" fw={600} c="dimmed">
-              Export structure preview:
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+              Configuration
             </Text>
-            {localMeta.countries
-              .filter((c) => c.code.trim())
-              .flatMap((c) => {
-                const cc = c.code.toLowerCase();
-                return c.languages
-                  .map((l) => l.trim().toLowerCase())
-                  .filter(Boolean)
-                  .flatMap((ln) => [
-                    `${localMeta.clientName}/${localMeta.adKind}-${ln}/${localMeta.adName}-exposed/${cc}/`,
-                    `${localMeta.clientName}/${localMeta.adKind}-${ln}/${localMeta.adName}-controlled/${cc}/`,
-                  ]);
-              })
-              .map((path, i) => (
-                <Text key={i} size="10px" c="dimmed" ff="monospace">
-                  {path}
+            <SimpleGrid cols={2} spacing="xs">
+              <TextInput
+                label="Client Name"
+                placeholder="e.g. chuck-e-cheese"
+                size="xs"
+                value={localMeta.clientName}
+                onChange={(e) =>
+                  setLocalMeta({
+                    ...localMeta,
+                    clientName: e.currentTarget.value,
+                  })
+                }
+              />
+              <TextInput
+                label="Ad Name"
+                placeholder="e.g. summer-promo"
+                size="xs"
+                value={localMeta.adName}
+                onChange={(e) =>
+                  setLocalMeta({ ...localMeta, adName: e.currentTarget.value })
+                }
+              />
+            </SimpleGrid>
+
+            <TextInput
+              label="Ad Kind"
+              placeholder="e.g. bls"
+              size="xs"
+              value={localMeta.adKind}
+              onChange={(e) =>
+                setLocalMeta({ ...localMeta, adKind: e.currentTarget.value })
+              }
+              style={{ maxWidth: 200 }}
+            />
+
+            <Divider color="var(--mantine-color-dark-5)" />
+
+            <Stack gap={6}>
+              <Checkbox
+                label="Enable tracker on export"
+                checked={trackerState.enabled}
+                onChange={(e) =>
+                  setLocalMeta({
+                    ...localMeta,
+                    tracker: {
+                      ...trackerState,
+                      enabled: e.currentTarget.checked,
+                    },
+                  })
+                }
+                size="xs"
+              />
+              <TextInput
+                label="Tracker Endpoint"
+                placeholder="https://rm.memob.com"
+                size="xs"
+                value={trackerState.endpoint}
+                disabled={!trackerState.enabled}
+                onChange={(e) =>
+                  setLocalMeta({
+                    ...localMeta,
+                    tracker: {
+                      ...trackerState,
+                      endpoint: e.currentTarget.value,
+                    },
+                  })
+                }
+              />
+            </Stack>
+
+            <Divider color="var(--mantine-color-dark-5)" />
+
+            <Group justify="space-between">
+              <Group gap="xs">
+                <Text size="sm" fw={600}>
+                  Countries
                 </Text>
+                <Badge size="xs" variant="light" color="blue">
+                  {localMeta.countries.length}
+                </Badge>
+              </Group>
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconPlus size={12} />}
+                onClick={addCountry}
+                style={{ display: hasCloudRegions ? "none" : undefined }}
+              >
+                Add Country
+              </Button>
+            </Group>
+
+            <Stack gap={8}>
+              {localMeta.countries.map((c, idx) => (
+                <Group key={idx} gap="xs" align="flex-end">
+                  <TextInput
+                    label={idx === 0 ? "Country Code" : undefined}
+                    placeholder="ksa"
+                    size="xs"
+                    value={c.code}
+                    onChange={(e) =>
+                      updateCountry(idx, { code: e.currentTarget.value })
+                    }
+                    style={{ flex: 1.1 }}
+                  />
+                  {localeOptions.length > 0 ? (
+                    <MultiSelect
+                      label={idx === 0 ? "Language(s)" : undefined}
+                      placeholder="select..."
+                      size="xs"
+                      data={localeOptions}
+                      value={c.languages}
+                      onChange={(vals) =>
+                        updateCountry(idx, { languages: vals })
+                      }
+                      style={{ flex: 1.4 }}
+                    />
+                  ) : (
+                    <TagsInput
+                      label={idx === 0 ? "Language(s)" : undefined}
+                      placeholder="en"
+                      size="xs"
+                      value={c.languages}
+                      onChange={(vals) =>
+                        updateCountry(idx, { languages: vals })
+                      }
+                      style={{ flex: 1.4 }}
+                    />
+                  )}
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    size="sm"
+                    onClick={() => removeCountry(idx)}
+                    disabled={localMeta.countries.length <= 1}
+                  >
+                    <IconTrash size={12} />
+                  </ActionIcon>
+                </Group>
               ))}
+            </Stack>
           </Stack>
-        )}
+
+          <Stack
+            gap="md"
+            style={{
+              border: "1px solid var(--mantine-color-dark-4)",
+              borderRadius: 8,
+              padding: 10,
+              background: "var(--mantine-color-dark-7)",
+              maxHeight: "62vh",
+              overflowY: "auto",
+            }}
+          >
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+              Tracker Preview
+            </Text>
+            {trackerState.enabled ? (
+              <SimpleGrid cols={2} spacing="sm" verticalSpacing="sm">
+                {trackerPreviewRows.map((row) => (
+                  <Stack
+                    key={row.id}
+                    gap={4}
+                    style={{
+                      border: "1px solid var(--mantine-color-dark-4)",
+                      borderRadius: 8,
+                      padding: 8,
+                      background: "var(--mantine-color-dark-8)",
+                    }}
+                  >
+                    <Text size="10px" fw={700} c="dimmed">
+                      {row.label}
+                    </Text>
+                    <Text
+                      size="10px"
+                      c="dimmed"
+                      ff="monospace"
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {row.url}
+                    </Text>
+                  </Stack>
+                ))}
+              </SimpleGrid>
+            ) : (
+              <Text size="xs" c="dimmed">
+                Tracker is disabled.
+              </Text>
+            )}
+
+            <Divider color="var(--mantine-color-dark-5)" />
+
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+              Export Structure Preview
+            </Text>
+            {folderPreviewRows.length > 0 ? (
+              <Stack gap={4}>
+                {folderPreviewRows.map((path, i) => (
+                  <Text key={i} size="10px" c="dimmed" ff="monospace">
+                    {path}
+                  </Text>
+                ))}
+              </Stack>
+            ) : (
+              <Text size="xs" c="dimmed">
+                Add client/ad name and at least one country to preview paths.
+              </Text>
+            )}
+          </Stack>
+        </SimpleGrid>
 
         <Group justify="flex-end" mt="xs">
           <Button variant="default" size="sm" onClick={onClose}>

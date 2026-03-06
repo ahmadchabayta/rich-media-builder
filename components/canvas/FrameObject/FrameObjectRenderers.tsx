@@ -103,6 +103,10 @@ export function AnswerGroupRender({
     ag.btnBgColor ?? "#ffffff",
     ag.btnBgOpacity ?? 18,
   );
+  const btnPaddingTop = ag.btnPaddingTop ?? 0;
+  const btnPaddingRight = ag.btnPaddingRight ?? 14;
+  const btnPaddingBottom = ag.btnPaddingBottom ?? 0;
+  const btnPaddingLeft = ag.btnPaddingLeft ?? 14;
   return (
     <div
       data-obj-id={obj.id}
@@ -140,6 +144,7 @@ export function AnswerGroupRender({
               : undefined) as React.CSSProperties["textTransform"],
             display: "flex",
             alignItems: "center",
+            padding: `${btnPaddingTop}px ${btnPaddingRight}px ${btnPaddingBottom}px ${btnPaddingLeft}px`,
             justifyContent:
               ag.textAlign === "left"
                 ? "flex-start"

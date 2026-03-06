@@ -38,6 +38,7 @@ export function buildCSSFilter(
 ): string | undefined {
   if (!f) return undefined;
   const p: string[] = [];
+  if (f.opacity != null && f.opacity !== 100) p.push(`opacity(${f.opacity}%)`);
   if (f.brightness != null && f.brightness !== 100)
     p.push(`brightness(${f.brightness}%)`);
   if (f.contrast != null && f.contrast !== 100)

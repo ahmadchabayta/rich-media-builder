@@ -40,8 +40,13 @@ export function BoardContextMenu() {
       const target = e.target as HTMLElement;
       // Only handle right-clicks NOT on an object
       if (target.closest("[data-obj-id]")) return;
-      // Only handle clicks inside the board container
-      if (!target.closest("#boardContainer")) return;
+      // Only handle clicks inside the central workspace/canvas region
+      if (
+        !target.closest('[data-board-workspace="true"]') &&
+        !target.closest(".canvas-container")
+      ) {
+        return;
+      }
       e.preventDefault();
       setCtx({ x: e.clientX, y: e.clientY });
     };

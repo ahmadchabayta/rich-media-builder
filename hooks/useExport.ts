@@ -7,6 +7,15 @@ import { zipSync, strToU8 } from "fflate";
 import type { QuizData } from "@src/lib/types";
 import type { ExportMeta } from "@src/store/types";
 
+function sanitizeSlug(value: string, fallback: string): string {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+}
+
 // ---------------------------------------------------------------------------
 // Image helpers
 // ---------------------------------------------------------------------------
@@ -120,14 +129,16 @@ async function collectAssets(quizData: QuizData): Promise<{
 // ---------------------------------------------------------------------------
 
 export function useExport() {
-  const quizData = useQuizStore((s) => s.quizData);
-  const defaultW = useQuizStore((s) => s.defaultW);
-  const defaultH = useQuizStore((s) => s.defaultH);
-  const exportMeta = useQuizStore((s) => s.exportMeta);
-  const customCss = useQuizStore((s) => s.customCss);
   const [exporting, setExporting] = useState(false);
 
   const exportQuiz = useCallback(async () => {
+    const state = useQuizStore.getState();
+    const quizData = state.quizData;
+    const defaultW = state.defaultW;
+    const defaultH = state.defaultH;
+    const exportMeta = state.exportMeta;
+    const customCss = state.customCss;
+
     if (quizData.frames.length < 2) {
       notifications.show({
         title: "Not enough frames",
@@ -165,6 +176,9 @@ export function useExport() {
       });
 
       const meta: ExportMeta = exportMeta;
+      const trackerEnabled = meta.tracker?.enabled ?? true;
+      const trackerEndpoint =
+        meta.tracker?.endpoint?.trim() || "https://rm.memob.com";
       const hasMetadata =
         meta.clientName.trim() &&
         meta.adName.trim() &&
@@ -189,12 +203,6 @@ export function useExport() {
             .map((l) => l.trim().toLowerCase())
             .filter(Boolean)) {
             // ── Apply translations for this locale ──
-            console.log(
-              `[export] locale="${ln}" translationKeys=`,
-              Object.keys(resolvedQuizData.translations ?? {}),
-              `entries for "${ln}":`,
-              Object.keys(resolvedQuizData.translations?.[ln] ?? {}),
-            );
             const localizedData =
               ln === "en"
                 ? resolvedQuizData
@@ -204,14 +212,14 @@ export function useExport() {
               const creativeName = `${client}-${adName}-${ln}-${variant}`;
               const folderPath = `${client}/${kind}-${ln}/${adName}-${variant}/${cc}`;
 
-              const trackerMeta =
-                variant === "exposed"
-                  ? {
-                      creativeName,
-                      countryCode: cc.toUpperCase(),
-                      language: ln,
-                    }
-                  : undefined; // controlled version has no tracker
+              const trackerMeta = trackerEnabled
+                ? {
+                    creativeName,
+                    countryCode: cc.toUpperCase(),
+                    language: ln,
+                    endpoint: trackerEndpoint,
+                  }
+                : undefined;
 
               const files = generateExportFiles(
                 localizedData,
@@ -233,7 +241,28 @@ export function useExport() {
       } else {
         // ── Legacy flat export ──
         const folder = `quiz_bls_${defaultW}x${defaultH}`;
-        const files = generateExportFiles(resolvedQuizData, defaultW, defaultH);
+        const fallbackCountry =
+          exportMeta.countries[0]?.code?.trim().toUpperCase() || "XX";
+        const fallbackLanguage =
+          exportMeta.countries[0]?.languages
+            ?.map((l) => l.trim().toLowerCase())
+            .find(Boolean) || "en";
+        const fallbackClient = sanitizeSlug(exportMeta.clientName, "bls");
+        const fallbackAd = sanitizeSlug(exportMeta.adName, "creative");
+
+        const files = generateExportFiles(
+          resolvedQuizData,
+          defaultW,
+          defaultH,
+          trackerEnabled
+            ? {
+                creativeName: `${fallbackClient}-${fallbackAd}-${fallbackLanguage}-flat`,
+                countryCode: fallbackCountry,
+                language: fallbackLanguage,
+                endpoint: trackerEndpoint,
+              }
+            : undefined,
+        );
 
         zipEntries[`${folder}/index.html`] = strToU8(files.html);
         zipEntries[`${folder}/ad.css`] = strToU8(files.css);
@@ -283,7 +312,7 @@ export function useExport() {
     } finally {
       setExporting(false);
     }
-  }, [quizData, defaultW, defaultH, exportMeta, customCss]);
+  }, []);
 
   return { exportQuiz, exporting };
 }

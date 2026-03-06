@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuizStore } from "@src/store/quizStore";
-import {
-  DEFAULT_HOLD,
-  MIN_FRAME_PX,
-  getTimings,
-  type FrameTiming,
-} from "./timelineConstants";
+import { DEFAULT_HOLD, MIN_FRAME_PX, getTimings } from "./timelineConstants";
 
 export function usePlayback() {
   const frames = useQuizStore((s) => s.quizData.frames);
@@ -190,10 +185,13 @@ export function usePlayback() {
         rafRef.current = null;
       }
       pbRef.current = null;
-      setPlaying(false);
-      setPaused(false);
-      setPlayheadFraction(0);
-      useQuizStore.getState().setPlayback(null);
+      const timeout = setTimeout(() => {
+        setPlaying(false);
+        setPaused(false);
+        setPlayheadFraction(0);
+        useQuizStore.getState().setPlayback(null);
+      }, 100);
+      return () => clearTimeout(timeout);
     }
   }, [frames.length]);
 

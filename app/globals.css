@@ -38,6 +38,30 @@ body {
   background: #64748b;
 }
 
+/* ── Tiptap rich-text editor (canvas inline editor) ─────────────────────── */
+
+.bls-rich-editor .ProseMirror {
+  outline: none;
+  cursor: text;
+}
+.bls-rich-editor .ProseMirror p {
+  margin: 0;
+  padding: 0;
+}
+.bls-rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ── Rich-text display in canvas (non-editing) ───────────────────────────── */
+.bls-rich-text p {
+  margin: 0;
+  padding: 0;
+}
+
 /* Board dot-grid background */
 .canvas-container {
   background-color: #d1d5db;

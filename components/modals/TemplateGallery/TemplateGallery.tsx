@@ -16,6 +16,7 @@ import { IconTemplate, IconBolt, IconStar } from "@tabler/icons-react";
 import { TEMPLATES } from "@src/lib/templates";
 import { useQuizStore } from "@src/store/quizStore";
 import type { Template } from "@src/lib/templates";
+import { useConfirmDialog } from "@src/context/ConfirmDialogContext";
 
 import { TemplateCard } from "./TemplateCard";
 
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function TemplateGallery({ opened, onClose }: Props) {
+  const { confirm } = useConfirmDialog();
   const [activeCategory, setActiveCategory] = useState("all");
   const loadProject = useQuizStore((s) => s.loadProject);
   const addFrame = useQuizStore((s) => s.addFrame);
@@ -44,13 +46,14 @@ export function TemplateGallery({ opened, onClose }: Props) {
       ? TEMPLATES
       : TEMPLATES.filter((t) => t.category === activeCategory);
 
-  const handleUse = (tpl: Template) => {
-    if (
-      !window.confirm(
-        "Load this template? Your current project will be replaced.",
-      )
-    )
-      return;
+  const handleUse = async (tpl: Template) => {
+    const ok = await confirm({
+      title: "Load template",
+      message: "Your current project will be replaced.",
+      confirmLabel: "Load template",
+      confirmColor: "red",
+    });
+    if (!ok) return;
     loadProject(tpl.snapshot);
     onClose();
   };
@@ -68,7 +71,6 @@ export function TemplateGallery({ opened, onClose }: Props) {
       addFrame(newFrame);
     }
     onClose();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     import("@mantine/notifications").then(({ notifications }) =>
       notifications.show({
         title: "Template duplicated",
@@ -169,7 +171,7 @@ export function TemplateGallery({ opened, onClose }: Props) {
           <TemplateCard
             key={tpl.id}
             tpl={tpl}
-            onUse={handleUse}
+            onUse={(nextTpl) => void handleUse(nextTpl)}
             onDuplicate={handleDuplicate}
           />
         ))}

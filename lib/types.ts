@@ -1,4 +1,5 @@
 export interface CSSFilterConfig {
+  opacity?: number; // 0–100, default 100
   brightness?: number; // 0–200, default 100
   contrast?: number; // 0–200, default 100
   saturate?: number; // 0–200, default 100
@@ -54,6 +55,7 @@ export interface Answer {
   id: string;
   text: string;
   src?: string;
+  dataAnswer?: string;
 }
 
 interface BaseObject {
@@ -96,6 +98,9 @@ export interface DefaultTypography {
 export interface TextObject extends BaseObject {
   type: "text";
   text: string;
+  /** HTML produced by the Tiptap rich-text editor (optional).
+   *  When present, overrides plain `text` for rendering and export. */
+  richText?: string;
   size: number;
   color: string;
   w?: number; // explicit container width (px); undefined = shrink-to-content
@@ -128,6 +133,10 @@ export interface AnswerGroupObject extends BaseObject {
   answers: Answer[];
   btnHeight: number;
   btnGap: number;
+  btnPaddingTop?: number;
+  btnPaddingRight?: number;
+  btnPaddingBottom?: number;
+  btnPaddingLeft?: number;
   btnBgColor: string;
   btnBgOpacity: number;
   btnRadius: number;

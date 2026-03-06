@@ -1,7 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 import React from "react";
 import { ActionIcon } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import type { Frame, QuizData } from "@src/lib/types";
+import type { Frame } from "@src/lib/types";
 
 interface FrameBackgroundProps {
   frame: Frame;

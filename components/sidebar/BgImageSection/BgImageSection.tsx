@@ -11,6 +11,7 @@ import {
   NumberInput,
   SimpleGrid,
 } from "@mantine/core";
+import Image from "next/image";
 import { IconX } from "@tabler/icons-react";
 import { useQuizStore } from "@src/store/quizStore";
 import type { BgImageAnimType } from "@src/lib/types";
@@ -84,9 +85,11 @@ export function BgImageSection() {
 
       {effectiveBg ? (
         <Box pos="relative">
-          <img
+          <Image
             src={effectiveBg}
             alt="bg"
+            width={320}
+            height={80}
             style={{
               width: "100%",
               height: 80,

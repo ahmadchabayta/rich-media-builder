@@ -25,6 +25,7 @@ import {
   IconEdit,
 } from "@tabler/icons-react";
 import { useSanityCloud } from "@src/hooks/useSanityCloud";
+import { useConfirmDialog } from "@src/context/ConfirmDialogContext";
 
 import { STATUS_FILTER_OPTIONS, ProjectCard } from "./ProjectCard";
 
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export function CloudProjectsModal({ opened, onClose }: Props) {
+  const { confirm } = useConfirmDialog();
   const {
     projects,
     projectsLoading,
@@ -58,14 +60,15 @@ export function CloudProjectsModal({ opened, onClose }: Props) {
   });
 
   const handleLoad = async (id: string) => {
-    if (
-      !window.confirm(
-        "Load this cloud project? Your current project will be replaced.",
-      )
-    )
-      return;
-    const ok = await loadFromCloud(id);
-    if (ok) onClose();
+    const ok = await confirm({
+      title: "Load cloud project",
+      message: "Your current project will be replaced.",
+      confirmLabel: "Load",
+      confirmColor: "blue",
+    });
+    if (!ok) return;
+    const loaded = await loadFromCloud(id);
+    if (loaded) onClose();
   };
 
   const handleDelete = async (id: string) => {

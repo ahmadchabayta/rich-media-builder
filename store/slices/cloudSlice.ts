@@ -11,9 +11,15 @@ const DEFAULT_EXPORT_META: ExportMeta = {
   adName: "",
   adKind: "bls",
   countries: [{ code: "ksa", languages: ["en"] }],
+  tracker: {
+    enabled: true,
+    endpoint: "https://rm.memob.com",
+  },
 };
 
-export const cloudSlice = (set: SliceSet, _get: SliceGet) => ({
+export const cloudSlice = (set: SliceSet, get: SliceGet) => {
+  void get;
+  return {
   // ── State ────────────────────────────────────────────────────────────────────
   cloudProjectId: null as string | null,
   cloudProjectTitle: null as string | null,
@@ -77,4 +83,5 @@ export const cloudSlice = (set: SliceSet, _get: SliceGet) => ({
       cloudProjectLocales: [],
       cloudProjectRegions: [],
     }),
-});
+  };
+};

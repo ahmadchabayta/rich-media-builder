@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Combobox,
   useCombobox,
@@ -9,7 +9,13 @@ import {
   Group,
   ActionIcon,
 } from "@mantine/core";
-import { IconSearch, IconX, IconLink, IconUpload, IconTrash } from "@tabler/icons-react";
+import {
+  IconSearch,
+  IconX,
+  IconLink,
+  IconUpload,
+  IconTrash,
+} from "@tabler/icons-react";
 import {
   SYSTEM_FONTS,
   ensureFont,
@@ -79,27 +85,32 @@ export function FontFamilySelect({ value, onChange }: Props) {
   const systemMatches = isUrl
     ? []
     : q
-    ? [...SYSTEM_FONTS].filter((f) => f.toLowerCase().includes(q)).sort()
-    : [...SYSTEM_FONTS].sort();
+      ? [...SYSTEM_FONTS].filter((f) => f.toLowerCase().includes(q)).sort()
+      : [...SYSTEM_FONTS].sort();
 
-  const googleMatches = isUrl
-    ? []
-    : q
-    ? GOOGLE_FONTS.filter((f) => f.family.toLowerCase().includes(q)).slice(0, MAX_RESULTS)
-    : GOOGLE_FONTS.slice(0, MAX_RESULTS);
+  const googleMatches = useMemo(() => {
+    const query = debouncedSearch.trim().toLowerCase();
+    const queryIsUrl = query.startsWith("http");
+    if (queryIsUrl) return [];
+    if (!query) return GOOGLE_FONTS.slice(0, MAX_RESULTS);
+    return GOOGLE_FONTS.filter((f) => f.family.toLowerCase().includes(query)).slice(
+      0,
+      MAX_RESULTS,
+    );
+  }, [debouncedSearch]);
 
   const customMatches: CustomFontEntry[] = isUrl
     ? []
     : q
-    ? customFonts.filter((cf) => cf.family.toLowerCase().includes(q))
-    : customFonts;
+      ? customFonts.filter((cf) => cf.family.toLowerCase().includes(q))
+      : customFonts;
 
   // -- Lazy-load preview glyphs for visible Google fonts
   useEffect(() => {
     if (!combobox.dropdownOpened) return;
     googleMatches.forEach((f) => loadGoogleFontPreview(f.family));
     if (value && !SYSTEM_FONTS.has(value)) loadGoogleFontPreview(value);
-  }, [debouncedSearch, combobox.dropdownOpened, value]);
+  }, [debouncedSearch, combobox.dropdownOpened, googleMatches, value]);
 
   // -- Event handlers
   const handleLoadUrl = (raw: string) => {
@@ -113,7 +124,12 @@ export function FontFamilySelect({ value, onChange }: Props) {
     document.head.appendChild(link);
     families.forEach((family) => {
       if (!customFonts.find((cf) => cf.family === family)) {
-        addCustomFont({ id: `url-${family}`, family, src: "", addedAt: Date.now() });
+        addCustomFont({
+          id: `url-${family}`,
+          family,
+          src: "",
+          addedAt: Date.now(),
+        });
       }
     });
     const first = families[0];
@@ -162,7 +178,12 @@ export function FontFamilySelect({ value, onChange }: Props) {
     reader.onload = () => {
       const src = reader.result as string;
       injectCustomFontFace(family, src);
-      addCustomFont({ id: `upload-${Date.now()}`, family, src, addedAt: Date.now() });
+      addCustomFont({
+        id: `upload-${Date.now()}`,
+        family,
+        src,
+        addedAt: Date.now(),
+      });
       onChange(family);
       setSearch(family);
       setDebouncedSearch(family);
@@ -328,7 +349,9 @@ export function FontFamilySelect({ value, onChange }: Props) {
                 <Combobox.Option value={UPLOAD_SENTINEL}>
                   <Group gap={6}>
                     <IconUpload size={13} />
-                    <Text size="xs" c="dimmed">Upload font file...</Text>
+                    <Text size="xs" c="dimmed">
+                      Upload font file...
+                    </Text>
                   </Group>
                 </Combobox.Option>
               )}

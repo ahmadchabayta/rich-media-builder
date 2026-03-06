@@ -1,10 +1,4 @@
-import {
-  useState,
-  useMemo,
-  useEffect,
-  useLayoutEffect,
-  type CSSProperties,
-} from "react";
+import { useState, useMemo, useLayoutEffect, type CSSProperties } from "react";
 import type { FrameObject as FrameObjectType } from "@src/lib/types";
 import { useDragContext } from "@src/context/DragContext";
 import { useQuizStore } from "@src/store/quizStore";
@@ -72,6 +66,7 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   });
 
   const [editing, setEditing] = useState(false);
+  const [textDivKey, setTextDivKey] = useState(0);
   const [hovered, setHovered] = useState(false);
 
   if (obj.type === "text" && obj.fontFamily) ensureFont(obj.fontFamily);
@@ -81,7 +76,8 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   const isMultiSelected =
     selectedObjectIds.includes(obj.id) && frameIndex === currentPreviewIndex;
 
-  const opacityVal = obj.opacity != null ? obj.opacity / 100 : 1;
+  const effectiveOpacity = obj.cssFilter?.opacity ?? obj.opacity;
+  const opacityVal = effectiveOpacity != null ? effectiveOpacity / 100 : 1;
   const rotate =
     obj.rotation != null && obj.rotation !== 0
       ? `rotate(${obj.rotation}deg)`
@@ -171,6 +167,11 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
     }
     setSelectedObject(obj.id);
     if (obj.locked) return;
+    if (obj.type === "text" && e.detail >= 2) {
+      setEditing(true);
+      return;
+    }
+    if (e.detail >= 2) return;
     startObjectDrag(e, obj.id, frameIndex);
   };
 
@@ -275,35 +276,51 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   };
 
   if (editing && obj.type === "text") {
+    console.log("[FrameObjectEl] RENDER InlineTextEditor for obj", obj.id);
     return (
       <InlineTextEditor
         obj={obj}
         frameIndex={frameIndex}
         opacityVal={opacityVal}
         rotate={rotate}
-        onCommit={(val) => {
+        onCommit={(richTextHtml, plainText) => {
+          console.log("[FrameObjectEl] onCommit for obj", obj.id);
           snapshot();
-          updateObject(frameIndex, obj.id, (o) => ({ ...o, text: val }));
-          setEditing(false);
+          updateObject(frameIndex, obj.id, (o) => ({
+            ...o,
+            richText: richTextHtml,
+            text: plainText,
+          }));
+          setTextDivKey((k) => k + 1);
         }}
-        onCancel={() => setEditing(false)}
+        onCancel={() => {
+          console.log("[FrameObjectEl] setEditing(false) for obj", obj.id);
+          setEditing(false);
+          setTextDivKey((k) => k + 1);
+        }}
       />
     );
   }
 
   return (
     <div
+      key={textDivKey}
       data-obj-id={obj.id}
       data-fi={frameIndex}
       style={textStyle}
-      onMouseDown={handleMouseDown}
-      {...hoverProps}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        if (obj.type === "text") setEditing(true);
+      onMouseDown={(e) => {
+        handleMouseDown(e);
       }}
+      {...hoverProps}
     >
-      {obj.text || ""}
+      {obj.richText ? (
+        <div
+          className="bls-rich-text"
+          dangerouslySetInnerHTML={{ __html: obj.richText }}
+        />
+      ) : (
+        obj.text || ""
+      )}
       {resizeHandles}
     </div>
   );

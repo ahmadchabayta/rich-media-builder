@@ -6,6 +6,7 @@ interface Props {
 }
 
 /** W/H is now handled by ObjectEditorSection. This component is a placeholder for future image-specific fields. */
-export function ImageObjectFields({ obj: _obj, updateObj: _updateObj }: Props) {
+export function ImageObjectFields(_props: Props) {
+  void _props;
   return null;
 }

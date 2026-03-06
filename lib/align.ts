@@ -38,6 +38,64 @@ export function calcCenterV(
 }
 
 /**
+ * Center a selected group horizontally in the frame while preserving
+ * relative spacing between selected objects.
+ */
+export function centerSelectionInFrameH(
+  frame: Frame,
+  objects: FrameObject[],
+  ids: string[],
+  boardContainer: HTMLElement | null = null,
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+
+  const left = Math.min(...targets.map((o) => o.x ?? 0));
+  const right = Math.max(
+    ...targets.map((o) => {
+      const w = getObjDimensions(o, boardContainer).w;
+      return (o.x ?? 0) + w;
+    }),
+  );
+  const selectionWidth = right - left;
+  const targetLeft = Math.round((frame.w - selectionWidth) / 2);
+  const delta = targetLeft - left;
+
+  return objects.map((o) =>
+    ids.includes(o.id) ? { ...o, x: Math.round((o.x ?? 0) + delta) } : o,
+  );
+}
+
+/**
+ * Center a selected group vertically in the frame while preserving
+ * relative spacing between selected objects.
+ */
+export function centerSelectionInFrameV(
+  frame: Frame,
+  objects: FrameObject[],
+  ids: string[],
+  boardContainer: HTMLElement | null = null,
+): FrameObject[] {
+  const targets = objects.filter((o) => ids.includes(o.id));
+  if (targets.length < 2) return objects;
+
+  const top = Math.min(...targets.map((o) => o.y ?? 0));
+  const bottom = Math.max(
+    ...targets.map((o) => {
+      const h = getObjDimensions(o, boardContainer).h;
+      return (o.y ?? 0) + h;
+    }),
+  );
+  const selectionHeight = bottom - top;
+  const targetTop = Math.round((frame.h - selectionHeight) / 2);
+  const delta = targetTop - top;
+
+  return objects.map((o) =>
+    ids.includes(o.id) ? { ...o, y: Math.round((o.y ?? 0) + delta) } : o,
+  );
+}
+
+/**
  * Distribute objects horizontally with even gaps between them.
  * When `ids` is provided (≥2), only those objects are moved; others stay.
  * Falls back to all objects when ids is empty/undefined.

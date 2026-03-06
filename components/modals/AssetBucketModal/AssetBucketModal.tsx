@@ -1,5 +1,4 @@
 "use client";
-import { useRef } from "react";
 import {
   Modal,
   Group,
@@ -11,6 +10,7 @@ import {
   Box,
   FileButton,
 } from "@mantine/core";
+import Image from "next/image";
 import {
   IconPhoto,
   IconTrash,
@@ -121,9 +121,11 @@ export function AssetBucketModal({ opened, onClose, onUseAsset }: Props) {
                 overflow: "hidden",
               }}
             >
-              <img
+              <Image
                 src={asset.src}
                 alt={asset.name}
+                width={300}
+                height={90}
                 style={{
                   width: "100%",
                   height: 90,

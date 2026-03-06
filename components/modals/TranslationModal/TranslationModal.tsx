@@ -58,6 +58,8 @@ export function TranslationModal({ opened, onClose }: Props) {
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
+  const [localeToDelete, setLocaleToDelete] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // Collect all translatable items (text objects + answer group answers) across non-locale frames
   const textObjects: Array<{
@@ -201,6 +203,24 @@ export function TranslationModal({ opened, onClose }: Props) {
 
   const translations = quizData.translations ?? {};
 
+  const openDeleteLocaleConfirm = (locale: string) => {
+    setLocaleToDelete(locale);
+    setDeleteConfirmText("");
+  };
+
+  const handleConfirmDeleteLocale = () => {
+    if (!localeToDelete) return;
+    if (
+      deleteConfirmText.trim().toLowerCase() !== localeToDelete.toLowerCase()
+    ) {
+      return;
+    }
+    removeTranslationLocale(localeToDelete);
+    if (activeLocale === localeToDelete) setActiveLocale(null);
+    setLocaleToDelete(null);
+    setDeleteConfirmText("");
+  };
+
   return (
     <Modal
       opened={opened}
@@ -278,10 +298,7 @@ export function TranslationModal({ opened, onClose }: Props) {
                       variant="subtle"
                       color="red"
                       style={{ marginLeft: 2 }}
-                      onClick={() => {
-                        removeTranslationLocale(lc);
-                        if (activeLocale === lc) setActiveLocale(null);
-                      }}
+                      onClick={() => openDeleteLocaleConfirm(lc)}
                     >
                       <IconTrash size={12} />
                     </ActionIcon>
@@ -473,10 +490,7 @@ export function TranslationModal({ opened, onClose }: Props) {
                         size="xs"
                         variant="subtle"
                         color="red"
-                        onClick={() => {
-                          removeTranslationLocale(lc);
-                          setTranslation(lc, "__init__", "");
-                        }}
+                        onClick={() => openDeleteLocaleConfirm(lc)}
                       >
                         <IconTrash size={12} />
                       </ActionIcon>
@@ -492,6 +506,60 @@ export function TranslationModal({ opened, onClose }: Props) {
           (or set <Code>window.__BLS_LANG__</Code>) to switch locale at runtime.
         </Text>
       </Stack>
+
+      <Modal
+        opened={localeToDelete != null}
+        onClose={() => {
+          setLocaleToDelete(null);
+          setDeleteConfirmText("");
+        }}
+        title="Delete locale"
+        centered
+        size="sm"
+      >
+        <Stack gap={10}>
+          <Text size="sm">
+            This will delete all translations and duplicated frames for locale{" "}
+            <Code>{(localeToDelete ?? "").toUpperCase()}</Code>. Other locales
+            remain untouched.
+          </Text>
+          <Text size="xs" c="dimmed">
+            Type <Code>{localeToDelete ?? ""}</Code> to confirm.
+          </Text>
+          <TextInput
+            placeholder={localeToDelete ?? ""}
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.currentTarget.value)}
+            size="xs"
+            autoFocus
+          />
+          <Group justify="flex-end" gap={8}>
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={() => {
+                setLocaleToDelete(null);
+                setDeleteConfirmText("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="xs"
+              color="red"
+              onClick={handleConfirmDeleteLocale}
+              disabled={
+                !localeToDelete ||
+                deleteConfirmText.trim().toLowerCase() !==
+                  localeToDelete.toLowerCase()
+              }
+            >
+              Delete locale
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Modal>
   );
 }
