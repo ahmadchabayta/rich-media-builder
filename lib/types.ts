@@ -109,6 +109,10 @@ export interface TextObject extends BaseObject {
   radius?: number;
   paddingX?: number; // horizontal padding (px)
   paddingY?: number; // vertical padding (px)
+  paddingTop?: number; // individual top padding (overrides paddingY)
+  paddingRight?: number; // individual right padding (overrides paddingX)
+  paddingBottom?: number; // individual bottom padding (overrides paddingY)
+  paddingLeft?: number; // individual left padding (overrides paddingX)
   fontFamily?: string;
   fontWeight?: string; // '400' | '700' | '900' …
   letterSpacing?: number; // px

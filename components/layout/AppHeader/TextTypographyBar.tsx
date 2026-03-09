@@ -284,8 +284,12 @@ export function TextTypographyBar({
         <Tooltip label="Background color" withArrow openDelay={300}>
           <ColorInput
             size="xs"
-            value={effBgColor || "#000000"}
-            onChange={(val) => apply({ bgColor: val })}
+            value={effBgColor || ""}
+            placeholder="none"
+            onChange={(val) => {
+              apply({ bgColor: val || undefined });
+              onChange({ bgEnabled: !!val });
+            }}
             format="rgba"
             style={{ width: 130, flexShrink: 0 }}
             withEyeDropper

@@ -1,0 +1,53 @@
+Priority 1 – Must-Have DSP-Safe Core
+
+-- each language should be in its own tab
+-- should include curve pen tool
+-- pen tool should be a straight line if shift is pressed while its going to next line
+-- pen tool should be able to connect any vector lines/shapes together
+-- created shapes/lines should include feature to change bg color, stroke color, stroke width, stroke type etc...
+-- i should be able to select edges of vector shape and re-edit them (basically a svg editor)
+
+
+
+- Liquid distortion layer (pure CSS backdrop-filter + mask)
+- Particle emitters (CSS keyframe particles)
+- 3D card tilt / gyroscope effect (CSS perspective + rotateX/Y)
+- Dynamic shadows reacting to cursor (CSS variables + filter/drop-shadow)
+- Text scramble / decoding animation (CSS content + keyframes)
+- SVG path drawing animations (stroke-dasharray + stroke-dashoffset)
+- Shape morphing (CSS clip-path + transition)
+- Tap / hover interactions (magnetic hover, tap-to-catch)
+
+Priority 2 – High Impact Templates
+- Scratch card reveal (CSS mask + hover/tap)
+- Slot machine (CSS keyframe reels)
+- Spin the wheel (CSS keyframe rotation)
+- Swipe comparison (before/after slider)
+- Memory card game (CSS flip animation)
+- Puzzle assemble game (CSS draggable + snap via CSS grid)
+- Product unboxing animation (CSS 3D transforms + layering)
+- Story / reels style vertical ad (CSS scroll snap + parallax)
+- Candy crush / match game (CSS grid + animations)
+- Maze game (CSS grid + hover/tap path highlighting)
+- 360 panorama (CSS perspective + rotate via keyframes)
+
+Priority 3 – Advanced Features & Optimization
+- Timeline animation editor (CSS variables + keyframes)
+- Drag physics system (CSS snap points + transitions)
+- Responsive auto-layout (CSS grid + flexbox + clamp())
+- Smart asset compression (optimized sprites + CSS only)
+- Parallax layers (CSS perspective + transform + scroll-linked variables)
+- Scroll triggered animations (CSS scroll-linked keyframes)
+- Dynamic theme switcher (CSS variables for dark/light mode)
+- AI auto-animate still images (pre-rendered sprite sheets)
+- Product builder (customizable CSS layers)
+
+Priority 4 – Power Features / Extras
+- Shader-like effects (CSS filter stack + backdrop-filter)
+- Procedural geometry generator (CSS clip-path + mask)
+- Interactive data visualizations (CSS counters + pseudo-elements)
+- Real-time multiplayer mini games (CSS only logic + fallback images)
+- Ad performance heatmap replay (pre-rendered overlays via CSS keyframes)
+- Smart asset swap (CSS variable + preloaded sprite sets)
+- Liquid morphing backgrounds (CSS gradients + clip-path transitions)
+- AI auto-generate ad layouts (pre-generated CSS classes)

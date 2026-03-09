@@ -17,6 +17,9 @@ export interface SharedRenderProps {
   handleMouseDown: (e: React.MouseEvent) => void;
   hoverProps: Record<string, () => void>;
   resizeHandles: ReactNode;
+  editing?: boolean;
+  onExitEditing?: () => void;
+  onAnswerChange?: (index: number, text: string) => void;
 }
 
 /** Image object renderer (with broken-image fallback) */
@@ -97,6 +100,9 @@ export function AnswerGroupRender({
   handleMouseDown,
   hoverProps,
   resizeHandles,
+  editing,
+  onExitEditing,
+  onAnswerChange,
 }: SharedRenderProps) {
   const ag = obj as AnswerGroupObject;
   const rgba = hexOpacityToRgba(
@@ -117,6 +123,11 @@ export function AnswerGroupRender({
         position: "relative" as const,
       }}
       onMouseDown={handleMouseDown}
+      onBlur={(e) => {
+        if (editing && !e.currentTarget.contains(e.relatedTarget as Node)) {
+          onExitEditing?.();
+        }
+      }}
       {...hoverProps}
     >
       {ag.answers.map((ans, i) => (
@@ -154,12 +165,42 @@ export function AnswerGroupRender({
             textAlign: ag.textAlign ?? "center",
             direction: ag.direction ?? "ltr",
             overflow: "hidden",
-            pointerEvents: "none",
+            pointerEvents: editing ? "auto" : "none",
+            position: "relative",
             marginBottom:
               i < ag.answers.length - 1 ? (ag.btnGap ?? 10) + "px" : undefined,
           }}
         >
-          {ans.src ? (
+          {editing ? (
+            <input
+              autoFocus={i === 0}
+              defaultValue={ans.text || ""}
+              onChange={(e) => onAnswerChange?.(i, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" || e.key === "Enter") {
+                  e.preventDefault();
+                  onExitEditing?.();
+                }
+                e.stopPropagation();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "2px solid rgba(59,130,246,0.7)",
+                outlineOffset: "-2px",
+                borderRadius: "inherit",
+                color: "inherit",
+                fontSize: "inherit",
+                fontFamily: "inherit",
+                fontWeight: "inherit",
+                textAlign: "inherit",
+                width: "100%",
+                padding: "0 4px",
+                cursor: "text",
+              }}
+            />
+          ) : ans.src ? (
             <img
               src={ans.src}
               style={{

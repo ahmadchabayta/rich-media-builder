@@ -1,11 +1,15 @@
-﻿import {
+﻿import { useState } from "react";
+import {
   Stack,
-  Text,
   NumberInput,
-  Checkbox,
   SimpleGrid,
   SegmentedControl,
+  ActionIcon,
+  Tooltip,
+  Group,
+  Text,
 } from "@mantine/core";
+import { IconBorderAll, IconSpacingHorizontal } from "@tabler/icons-react";
 import type { TextObject, FrameObject } from "@src/lib/types";
 import { n } from "../utils";
 
@@ -15,50 +19,116 @@ interface Props {
 }
 
 export function TextObjectFields({ obj, updateObj }: Props) {
+  const [advanced, setAdvanced] = useState(false);
+
   return (
     <Stack gap="xs">
-      {/* Bg options */}
-      <SimpleGrid cols={2} spacing="xs">
-        <Checkbox
-          size="xs"
-          checked={!!obj.bgEnabled}
-          onChange={(e) => updateObj({ bgEnabled: e.currentTarget.checked })}
-          label="Enable bg fill"
-        />
-        <NumberInput
-          label="Corner radius"
-          placeholder="px"
-          min={0}
-          value={obj.radius ?? 8}
-          onChange={(val) => updateObj({ radius: Math.max(0, n(val)) })}
-        />
-      </SimpleGrid>
+      {/* Corner radius */}
+      <NumberInput
+        label="Corner radius"
+        placeholder="px"
+        min={0}
+        value={obj.radius ?? 8}
+        onChange={(val) => updateObj({ radius: Math.max(0, n(val)) })}
+      />
 
       {/* Padding */}
-      <SimpleGrid cols={2} spacing="xs">
-        <NumberInput
-          label="Pad X"
-          placeholder="px"
-          value={obj.paddingX ?? 0}
-          min={0}
-          onChange={(val) =>
-            updateObj({
-              paddingX: Math.max(0, n(val as number | string)),
-            } as Partial<FrameObject>)
-          }
-        />
-        <NumberInput
-          label="Pad Y"
-          placeholder="px"
-          value={obj.paddingY ?? 0}
-          min={0}
-          onChange={(val) =>
-            updateObj({
-              paddingY: Math.max(0, n(val as number | string)),
-            } as Partial<FrameObject>)
-          }
-        />
-      </SimpleGrid>
+      <Group justify="space-between" align="center">
+        <Text size="xs" c="dimmed" fw={600}>
+          Padding
+        </Text>
+        <Tooltip
+          label={advanced ? "Symmetric H/V" : "Per-side T/R/B/L"}
+          withArrow
+        >
+          <ActionIcon
+            size={18}
+            variant={advanced ? "filled" : "subtle"}
+            color="gray"
+            onClick={() => setAdvanced((a) => !a)}
+          >
+            {advanced ? (
+              <IconSpacingHorizontal size={12} />
+            ) : (
+              <IconBorderAll size={12} />
+            )}
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+
+      {advanced ? (
+        <SimpleGrid cols={4} spacing="xs">
+          <NumberInput
+            label="T"
+            placeholder="px"
+            value={obj.paddingTop ?? obj.paddingY ?? 0}
+            min={0}
+            onChange={(val) =>
+              updateObj({
+                paddingTop: Math.max(0, n(val as number | string)),
+              } as Partial<FrameObject>)
+            }
+          />
+          <NumberInput
+            label="R"
+            placeholder="px"
+            value={obj.paddingRight ?? obj.paddingX ?? 0}
+            min={0}
+            onChange={(val) =>
+              updateObj({
+                paddingRight: Math.max(0, n(val as number | string)),
+              } as Partial<FrameObject>)
+            }
+          />
+          <NumberInput
+            label="B"
+            placeholder="px"
+            value={obj.paddingBottom ?? obj.paddingY ?? 0}
+            min={0}
+            onChange={(val) =>
+              updateObj({
+                paddingBottom: Math.max(0, n(val as number | string)),
+              } as Partial<FrameObject>)
+            }
+          />
+          <NumberInput
+            label="L"
+            placeholder="px"
+            value={obj.paddingLeft ?? obj.paddingX ?? 0}
+            min={0}
+            onChange={(val) =>
+              updateObj({
+                paddingLeft: Math.max(0, n(val as number | string)),
+              } as Partial<FrameObject>)
+            }
+          />
+        </SimpleGrid>
+      ) : (
+        <SimpleGrid cols={2} spacing="xs">
+          <NumberInput
+            label="H (←→)"
+            placeholder="px"
+            value={obj.paddingX ?? 0}
+            min={0}
+            onChange={(val) =>
+              updateObj({
+                paddingX: Math.max(0, n(val as number | string)),
+              } as Partial<FrameObject>)
+            }
+          />
+          <NumberInput
+            label="V (↑↓)"
+            placeholder="px"
+            value={obj.paddingY ?? 0}
+            min={0}
+            onChange={(val) =>
+              updateObj({
+                paddingY: Math.max(0, n(val as number | string)),
+              } as Partial<FrameObject>)
+            }
+          />
+        </SimpleGrid>
+      )}
 
       {/* Text direction */}
       <SegmentedControl
@@ -70,30 +140,6 @@ export function TextObjectFields({ obj, updateObj }: Props) {
           { value: "ltr", label: "LTR" },
           { value: "rtl", label: "RTL" },
         ]}
-      />
-
-      {/* Text content */}
-      <Text size="xs" c="dimmed" fw={600}>
-        Text content
-      </Text>
-      <textarea
-        rows={4}
-        style={{
-          background: "var(--mantine-color-dark-6)",
-          border: "1px solid var(--mantine-color-dark-4)",
-          borderRadius: "var(--mantine-radius-sm)",
-          padding: "6px 10px",
-          color: "inherit",
-          fontSize: "var(--mantine-font-size-xs)",
-          width: "100%",
-          resize: "vertical",
-          lineHeight: 1.5,
-          fontFamily: "inherit",
-          boxSizing: "border-box",
-        }}
-        placeholder="Object text"
-        value={obj.text || ""}
-        onChange={(e) => updateObj({ text: e.target.value })}
       />
     </Stack>
   );

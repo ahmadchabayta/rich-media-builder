@@ -5,6 +5,7 @@ import {
   Divider,
   NumberInput,
   Group,
+  Tabs,
 } from "@mantine/core";
 import { ANIM_IN, ANIM_OUT } from "@src/lib/animPresets";
 import type {
@@ -58,52 +59,61 @@ export function AnimationSection({
         />
       </Group>
 
-      <AnimPhaseBlock
-        label="Animate In"
-        phase="in"
-        presetList={ANIM_IN}
-        presetValue={selectedObj.animIn}
-        customValue={selectedObj.customAnimIn}
-        onPresetChange={(cfg) =>
-          updateObj({ animIn: cfg as AnimConfig } as Partial<FrameObject>)
-        }
-        onCustomChange={(anim) =>
-          updateObj({ customAnimIn: anim } as Partial<FrameObject>)
-        }
-      />
+      <Tabs defaultValue="in">
+        <Tabs.List grow>
+          <Tabs.Tab value="in">In</Tabs.Tab>
+          <Tabs.Tab value="out">Out</Tabs.Tab>
+          <Tabs.Tab value="loop">Loop</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="in" pt="xs">
+          <AnimPhaseBlock
+            label="Animate In"
+            phase="in"
+            presetList={ANIM_IN}
+            presetValue={selectedObj.animIn}
+            customValue={selectedObj.customAnimIn}
+            onPresetChange={(cfg) =>
+              updateObj({ animIn: cfg as AnimConfig } as Partial<FrameObject>)
+            }
+            onCustomChange={(anim) =>
+              updateObj({ customAnimIn: anim } as Partial<FrameObject>)
+            }
+          />
+        </Tabs.Panel>
+        <Tabs.Panel value="out" pt="xs">
+          <AnimPhaseBlock
+            label="Animate Out"
+            phase="out"
+            presetList={ANIM_OUT}
+            presetValue={selectedObj.animOut}
+            customValue={selectedObj.customAnimOut}
+            onPresetChange={(cfg) =>
+              updateObj({ animOut: cfg as AnimConfig } as Partial<FrameObject>)
+            }
+            onCustomChange={(anim) =>
+              updateObj({ customAnimOut: anim } as Partial<FrameObject>)
+            }
+          />
+        </Tabs.Panel>
+        <Tabs.Panel value="loop" pt="xs">
+          <AnimPhaseBlock
+            label="Loop / Decoration"
+            phase="loop"
+            presetValue={selectedObj.animLoop}
+            customValue={selectedObj.customAnimLoop}
+            onPresetChange={(cfg) =>
+              updateObj({
+                animLoop: (cfg ?? undefined) as LoopAnimConfig | undefined,
+              } as Partial<FrameObject>)
+            }
+            onCustomChange={(anim) =>
+              updateObj({ customAnimLoop: anim } as Partial<FrameObject>)
+            }
+          />
+        </Tabs.Panel>
+      </Tabs>
 
-      <AnimPhaseBlock
-        label="Animate Out"
-        phase="out"
-        presetList={ANIM_OUT}
-        presetValue={selectedObj.animOut}
-        customValue={selectedObj.customAnimOut}
-        onPresetChange={(cfg) =>
-          updateObj({ animOut: cfg as AnimConfig } as Partial<FrameObject>)
-        }
-        onCustomChange={(anim) =>
-          updateObj({ customAnimOut: anim } as Partial<FrameObject>)
-        }
-      />
-
-      <Divider my={4} />
-
-      <AnimPhaseBlock
-        label="Loop / Decoration"
-        phase="loop"
-        presetValue={selectedObj.animLoop}
-        customValue={selectedObj.customAnimLoop}
-        onPresetChange={(cfg) =>
-          updateObj({
-            animLoop: (cfg ?? undefined) as LoopAnimConfig | undefined,
-          } as Partial<FrameObject>)
-        }
-        onCustomChange={(anim) =>
-          updateObj({ customAnimLoop: anim } as Partial<FrameObject>)
-        }
-      />
-
-      <Divider my={4} />
+      <Divider my={4} label="Interactions" labelPosition="center" />
       <HoverEffectPanel
         value={selectedObj.hoverEffect}
         onChange={(eff: HoverEffect | undefined) =>

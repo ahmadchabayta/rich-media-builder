@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import {
-  Accordion,
   Stack,
   Group,
   Text,
@@ -238,153 +237,140 @@ export function FiltersBlendPanel({ obj, updateObj }: Props) {
   const hasFilter = obj.cssFilter != null;
 
   return (
-    <Accordion
-      multiple
-      defaultValue={["effects"]}
-      variant="separated"
-      radius="sm"
-    >
-      <Accordion.Item value="effects">
-        <Accordion.Control>
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Text size="xs" fw={700} c="dimmed">
-              Effects
-            </Text>
-            {hasFilter && (
-              <Tooltip label="Reset all effects" withArrow>
-                <ActionIcon
-                  size={18}
-                  variant="subtle"
-                  color="gray"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    resetFilters();
-                  }}
-                >
-                  <IconRefresh size={12} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </Group>
-        </Accordion.Control>
-        <Accordion.Panel>
-          <Stack gap="xs">
-            <Select
-              label="Smart preset"
-              size="xs"
-              data={presetOptions}
-              placeholder="Choose a preset"
-              onChange={applyPreset}
-              searchable
-            />
+    <Stack gap="xs">
+      <Group justify="space-between" align="center" wrap="nowrap">
+        <Text size="xs" fw={700} c="dimmed">
+          Effects
+        </Text>
+        {hasFilter && (
+          <Tooltip label="Reset all effects" withArrow>
+            <ActionIcon
+              size={18}
+              variant="subtle"
+              color="gray"
+              onClick={(e) => {
+                e.stopPropagation();
+                resetFilters();
+              }}
+            >
+              <IconRefresh size={12} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
+      <Select
+        label="Smart preset"
+        size="xs"
+        data={presetOptions}
+        placeholder="Choose a preset"
+        onChange={applyPreset}
+        searchable
+      />
 
-            <Stack gap={2}>
-              <Text size="xs" c="dimmed" fw={600}>
-                Opacity
-              </Text>
-              <Slider
-                min={0}
-                max={100}
-                value={f.opacity ?? obj.opacity ?? 100}
-                onChange={(val) => set("opacity", val)}
-                label={(v) => `${v}%`}
-                size="xs"
-                marks={[{ value: 0 }, { value: 50 }, { value: 100 }]}
-              />
-            </Stack>
+      <Stack gap={2}>
+        <Text size="xs" c="dimmed" fw={600}>
+          Opacity
+        </Text>
+        <Slider
+          min={0}
+          max={100}
+          value={f.opacity ?? obj.opacity ?? 100}
+          onChange={(val) => set("opacity", val)}
+          label={(v) => `${v}%`}
+          size="xs"
+          marks={[{ value: 0 }, { value: 50 }, { value: 100 }]}
+        />
+      </Stack>
 
-            <Select
-              label="Blend mode"
-              size="xs"
-              data={BLEND_MODES.map((m) => ({ value: m, label: m }))}
-              value={obj.blendMode ?? "normal"}
-              onChange={(v) =>
-                updateObj({
-                  blendMode: v === "normal" ? undefined : (v ?? undefined),
-                } as Partial<FrameObject>)
-              }
-              clearable
-              placeholder="normal"
-            />
+      <Select
+        label="Blend mode"
+        size="xs"
+        data={BLEND_MODES.map((m) => ({ value: m, label: m }))}
+        value={obj.blendMode ?? "normal"}
+        onChange={(v) =>
+          updateObj({
+            blendMode: v === "normal" ? undefined : (v ?? undefined),
+          } as Partial<FrameObject>)
+        }
+        clearable
+        placeholder="normal"
+      />
 
-            <Divider />
+      <Divider />
 
-            <SimpleGrid cols={2} spacing="xs">
-              <DragNumberInput
-                label="Brightness %"
-                value={f.brightness ?? 100}
-                min={0}
-                max={300}
-                step={1}
-                pxPerStep={1}
-                onChange={(v) => set("brightness", v)}
-              />
-              <DragNumberInput
-                label="Contrast %"
-                value={f.contrast ?? 100}
-                min={0}
-                max={300}
-                step={1}
-                pxPerStep={1}
-                onChange={(v) => set("contrast", v)}
-              />
-              <DragNumberInput
-                label="Saturate %"
-                value={f.saturate ?? 100}
-                min={0}
-                max={400}
-                step={1}
-                pxPerStep={1}
-                onChange={(v) => set("saturate", v)}
-              />
-              <DragNumberInput
-                label="Hue Rotate °"
-                value={f.hueRotate ?? 0}
-                min={-180}
-                max={180}
-                step={1}
-                pxPerStep={1}
-                onChange={(v) => set("hueRotate", v)}
-              />
-              <DragNumberInput
-                label="Blur px"
-                value={f.blur ?? 0}
-                min={0}
-                max={40}
-                step={0.5}
-                pxPerStep={2}
-                onChange={(v) => set("blur", v)}
-              />
-              <DragNumberInput
-                label="Grayscale %"
-                value={f.grayscale ?? 0}
-                min={0}
-                max={100}
-                step={1}
-                pxPerStep={1}
-                onChange={(v) => set("grayscale", v)}
-              />
-              <DragNumberInput
-                label="Sepia %"
-                value={f.sepia ?? 0}
-                min={0}
-                max={100}
-                step={1}
-                pxPerStep={1}
-                onChange={(v) => set("sepia", v)}
-              />
-              <DragNumberInput
-                label="Invert %"
-                value={f.invert ?? 0}
-                min={0}
-                max={100}
-                step={5}
-                onChange={(v) => set("invert", Number(v))}
-              />
-            </SimpleGrid>
-          </Stack>
-        </Accordion.Panel>
-      </Accordion.Item>
-    </Accordion>
+      <SimpleGrid cols={2} spacing="xs">
+        <DragNumberInput
+          label="Brightness %"
+          value={f.brightness ?? 100}
+          min={0}
+          max={300}
+          step={1}
+          pxPerStep={1}
+          onChange={(v) => set("brightness", v)}
+        />
+        <DragNumberInput
+          label="Contrast %"
+          value={f.contrast ?? 100}
+          min={0}
+          max={300}
+          step={1}
+          pxPerStep={1}
+          onChange={(v) => set("contrast", v)}
+        />
+        <DragNumberInput
+          label="Saturate %"
+          value={f.saturate ?? 100}
+          min={0}
+          max={400}
+          step={1}
+          pxPerStep={1}
+          onChange={(v) => set("saturate", v)}
+        />
+        <DragNumberInput
+          label="Hue Rotate °"
+          value={f.hueRotate ?? 0}
+          min={-180}
+          max={180}
+          step={1}
+          pxPerStep={1}
+          onChange={(v) => set("hueRotate", v)}
+        />
+        <DragNumberInput
+          label="Blur px"
+          value={f.blur ?? 0}
+          min={0}
+          max={40}
+          step={0.5}
+          pxPerStep={2}
+          onChange={(v) => set("blur", v)}
+        />
+        <DragNumberInput
+          label="Grayscale %"
+          value={f.grayscale ?? 0}
+          min={0}
+          max={100}
+          step={1}
+          pxPerStep={1}
+          onChange={(v) => set("grayscale", v)}
+        />
+        <DragNumberInput
+          label="Sepia %"
+          value={f.sepia ?? 0}
+          min={0}
+          max={100}
+          step={1}
+          pxPerStep={1}
+          onChange={(v) => set("sepia", v)}
+        />
+        <DragNumberInput
+          label="Invert %"
+          value={f.invert ?? 0}
+          min={0}
+          max={100}
+          step={5}
+          onChange={(v) => set("invert", Number(v))}
+        />
+      </SimpleGrid>
+    </Stack>
   );
 }

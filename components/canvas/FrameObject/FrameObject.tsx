@@ -1,5 +1,8 @@
 import { useState, useMemo, useLayoutEffect, type CSSProperties } from "react";
-import type { FrameObject as FrameObjectType } from "@src/lib/types";
+import type {
+  FrameObject as FrameObjectType,
+  AnswerGroupObject,
+} from "@src/lib/types";
 import { useDragContext } from "@src/context/DragContext";
 import { useQuizStore } from "@src/store/quizStore";
 import { ensureFont, ensureFontsFromRichText } from "@src/lib/fonts";
@@ -174,6 +177,10 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
       setEditing(true);
       return;
     }
+    if (obj.type === "answerGroup" && e.detail >= 2) {
+      setEditing(true);
+      return;
+    }
     if (e.detail >= 2) return;
     startObjectDrag(e, obj.id, frameIndex);
   };
@@ -234,6 +241,20 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
     handleMouseDown,
     hoverProps,
     resizeHandles,
+    ...(obj.type === "answerGroup" && {
+      editing,
+      onExitEditing: () => setEditing(false),
+      onAnswerChange: (index: number, text: string) => {
+        const ag = obj as AnswerGroupObject;
+        const newAnswers = ag.answers.map((a, i) =>
+          i === index ? { ...a, text } : a,
+        );
+        updateObject(frameIndex, obj.id, (o) => ({
+          ...o,
+          answers: newAnswers,
+        }));
+      },
+    }),
   };
   if (obj.type === "image") return <ImageRender {...shared} />;
   if (obj.type === "answerGroup") return <AnswerGroupRender {...shared} />;
@@ -242,19 +263,23 @@ export function FrameObjectEl({ obj, frameIndex }: Props) {
   if (obj.type === "path") return <PathRender {...shared} />;
 
   // ── Text object ───────────────────────────────────────────────────────────
-  const px = obj.paddingX ?? (obj.bgEnabled ? 14 : 0);
-  const py = obj.paddingY ?? (obj.bgEnabled ? 6 : 0);
+  const pTop = obj.paddingTop ?? obj.paddingY ?? (obj.bgEnabled ? 6 : 0);
+  const pRight = obj.paddingRight ?? obj.paddingX ?? (obj.bgEnabled ? 14 : 0);
+  const pBottom = obj.paddingBottom ?? obj.paddingY ?? (obj.bgEnabled ? 6 : 0);
+  const pLeft = obj.paddingLeft ?? obj.paddingX ?? (obj.bgEnabled ? 14 : 0);
 
   const bgStyle: CSSProperties =
     obj.bgEnabled && obj.bgColor
       ? {
           backgroundColor: obj.bgColor,
           borderRadius: (obj.radius ?? 8) + "px",
-          padding: `${py}px ${px}px`,
+          padding: `${pTop}px ${pRight}px ${pBottom}px ${pLeft}px`,
         }
       : {
           textShadow: "0 1px 2px rgba(0,0,0,.6)",
-          ...(px || py ? { padding: `${py}px ${px}px` } : {}),
+          ...(pTop || pRight || pBottom || pLeft
+            ? { padding: `${pTop}px ${pRight}px ${pBottom}px ${pLeft}px` }
+            : {}),
         };
 
   const textStyle: CSSProperties = {

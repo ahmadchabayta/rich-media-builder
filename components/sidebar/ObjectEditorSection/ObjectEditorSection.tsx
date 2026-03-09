@@ -4,7 +4,6 @@ import {
   Group,
   Text,
   Badge,
-  Button,
   TextInput,
   NumberInput,
   SimpleGrid,
@@ -29,16 +28,14 @@ import {
   createDefaultAnswers,
   createImageFromFile,
 } from "@src/lib/insertHelpers";
-import { FrameAnimPanel } from "@src/components/sidebar/FrameAnimPanel";
+import { BgImageSection } from "@src/components/sidebar/BgImageSection";
 import { TextObjectFields } from "@src/components/sidebar/TextObjectFields";
 import { ImageObjectFields } from "@src/components/sidebar/ImageObjectFields";
 import { AnswerGroupFields } from "@src/components/sidebar/AnswerGroupFields";
 import { ShapeObjectFields } from "@src/components/sidebar/ShapeObjectFields";
 import { DividerObjectFields } from "@src/components/sidebar/DividerObjectFields";
-import { FiltersBlendPanel } from "@src/components/sidebar/FiltersBlendPanel";
 import { n } from "../utils";
 import { ObjectPalette } from "./ObjectPalette";
-import { AnimationSection } from "./AnimationSection";
 
 export function ObjectEditorSection() {
   const [mounted, setMounted] = useState(false);
@@ -48,7 +45,7 @@ export function ObjectEditorSection() {
   }, []);
 
   const store = useQuizStore();
-  const { currentPreviewIndex, selectedObjectId, animMode } = store;
+  const { currentPreviewIndex, selectedObjectId } = store;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const frame = store.getActiveFrame();
   const selectedObj = store.getSelectedObject();
@@ -87,38 +84,22 @@ export function ObjectEditorSection() {
         onChange={handleImageUpload}
       />
 
-      {/* Top bar: frame indicator + animate toggle */}
-      <Group justify="space-between" align="center">
-        <Group gap={6} align="center">
-          <Text
-            size="xs"
-            fw={600}
-            c="dimmed"
-            tt="uppercase"
-            style={{ letterSpacing: "0.06em" }}
-          >
-            Frame {currentPreviewIndex + 1}
-          </Text>
-          {frame?.isEndFrame && (
-            <Badge size="xs" variant="outline" color="gray" radius="sm">
-              End
-            </Badge>
-          )}
-        </Group>
-        <Button
+      {/* Frame indicator */}
+      <Group gap={6} align="center" pb={4}>
+        <Text
           size="xs"
-          variant={animMode ? "filled" : "default"}
-          color={animMode ? "yellow" : "gray"}
-          leftSection={
-            <span style={{ fontSize: 12 }}>
-              {animMode ? "\u2190" : "\uD83C\uDFAC"}
-            </span>
-          }
-          onClick={store.toggleAnimMode}
-          disabled={!frame}
+          fw={600}
+          c="dimmed"
+          tt="uppercase"
+          style={{ letterSpacing: "0.06em" }}
         >
-          {animMode ? "Back" : "Animate"}
-        </Button>
+          Frame {currentPreviewIndex + 1}
+        </Text>
+        {frame?.isEndFrame && (
+          <Badge size="xs" variant="outline" color="gray" radius="sm">
+            End
+          </Badge>
+        )}
       </Group>
 
       {!frame && (
@@ -127,46 +108,10 @@ export function ObjectEditorSection() {
         </Text>
       )}
 
-      {/* Frame selected, nothing selected on canvas */}
+      {/* No object selected — show background settings and object palette */}
       {frame && !selectedObj && (
         <Stack gap="sm">
-          <SimpleGrid cols={2} spacing="xs">
-            <NumberInput
-              label="Frame W"
-              value={frame.w}
-              min={50}
-              clampBehavior="none"
-              onChange={(val) => {
-                const v = n(val, 50);
-                if (v >= 50)
-                  store.updateFrameField(currentPreviewIndex, { w: v });
-              }}
-              onBlur={(e) => {
-                const v = Math.max(50, parseInt(e.target.value) || 50);
-                store.updateFrameField(currentPreviewIndex, { w: v });
-              }}
-            />
-            <NumberInput
-              label="Frame H"
-              value={frame.h}
-              min={50}
-              clampBehavior="none"
-              onChange={(val) => {
-                const v = n(val, 50);
-                if (v >= 50)
-                  store.updateFrameField(currentPreviewIndex, { h: v });
-              }}
-              onBlur={(e) => {
-                const v = Math.max(50, parseInt(e.target.value) || 50);
-                store.updateFrameField(currentPreviewIndex, { h: v });
-              }}
-            />
-          </SimpleGrid>
-
-          {animMode && (
-            <FrameAnimPanel frame={frame} frameIndex={currentPreviewIndex} />
-          )}
-
+          <BgImageSection />
           <Divider label="Add objects" labelPosition="left" mt={4} />
           <ObjectPalette
             disabled={!frame}
@@ -299,109 +244,100 @@ export function ObjectEditorSection() {
             </Group>
           </Group>
 
-          {animMode ? (
-            <AnimationSection selectedObj={selectedObj} updateObj={updateObj} />
-          ) : (
-            <>
-              <SimpleGrid cols={2} spacing="xs">
+          <>
+            <SimpleGrid cols={2} spacing="xs">
+              <NumberInput
+                id="obj-x-input"
+                label="X"
+                value={selectedObj.x ?? 0}
+                onChange={(val) => updateObj({ x: n(val) })}
+              />
+              <NumberInput
+                id="obj-y-input"
+                label="Y"
+                value={selectedObj.y ?? 0}
+                onChange={(val) => updateObj({ y: n(val) })}
+              />
+            </SimpleGrid>
+            {/* W / H – shown for all object types that expose these fields */}
+            <SimpleGrid cols={2} spacing="xs">
+              {(selectedObj.type === "shape" ||
+                selectedObj.type === "image" ||
+                selectedObj.type === "divider" ||
+                selectedObj.type === "answerGroup" ||
+                selectedObj.type === "text") && (
                 <NumberInput
-                  id="obj-x-input"
-                  label="X"
-                  value={selectedObj.x ?? 0}
-                  onChange={(val) => updateObj({ x: n(val) })}
-                />
-                <NumberInput
-                  id="obj-y-input"
-                  label="Y"
-                  value={selectedObj.y ?? 0}
-                  onChange={(val) => updateObj({ y: n(val) })}
-                />
-              </SimpleGrid>
-              {/* W / H – shown for all object types that expose these fields */}
-              <SimpleGrid cols={2} spacing="xs">
-                {(selectedObj.type === "shape" ||
-                  selectedObj.type === "image" ||
-                  selectedObj.type === "divider" ||
-                  selectedObj.type === "answerGroup" ||
-                  selectedObj.type === "text") && (
-                  <NumberInput
-                    label="W"
-                    value={selectedObj.w ?? ""}
-                    min={1}
-                    placeholder={
-                      selectedObj.type === "text" ? "auto" : undefined
-                    }
-                    onChange={(val) => {
-                      if (selectedObj.type === "text" && val === "") {
-                        updateObj({ w: undefined } as Partial<FrameObject>);
-                      } else {
-                        updateObj({
-                          w: Math.max(1, n(val as number | string, 1)),
-                        } as Partial<FrameObject>);
-                      }
-                    }}
-                  />
-                )}
-                {(selectedObj.type === "shape" ||
-                  selectedObj.type === "image") && (
-                  <NumberInput
-                    label="H"
-                    value={selectedObj.h ?? 0}
-                    min={1}
-                    onChange={(val) =>
+                  label="W"
+                  value={selectedObj.w ?? ""}
+                  min={1}
+                  placeholder={selectedObj.type === "text" ? "auto" : undefined}
+                  onChange={(val) => {
+                    if (selectedObj.type === "text" && val === "") {
+                      updateObj({ w: undefined } as Partial<FrameObject>);
+                    } else {
                       updateObj({
-                        h: Math.max(1, n(val as number | string, 1)),
-                      } as Partial<FrameObject>)
+                        w: Math.max(1, n(val as number | string, 1)),
+                      } as Partial<FrameObject>);
                     }
-                  />
-                )}
-              </SimpleGrid>
-              <SimpleGrid cols={2} spacing="xs">
+                  }}
+                />
+              )}
+              {(selectedObj.type === "shape" ||
+                selectedObj.type === "image") && (
                 <NumberInput
-                  label="Rotation °"
-                  value={selectedObj.rotation ?? 0}
-                  min={-360}
-                  max={360}
-                  step={1}
+                  label="H"
+                  value={selectedObj.h ?? 0}
+                  min={1}
                   onChange={(val) =>
-                    updateObj({ rotation: n(val) } as Partial<FrameObject>)
+                    updateObj({
+                      h: Math.max(1, n(val as number | string, 1)),
+                    } as Partial<FrameObject>)
                   }
                 />
-              </SimpleGrid>
+              )}
+            </SimpleGrid>
+            <SimpleGrid cols={2} spacing="xs">
+              <NumberInput
+                label="Rotation °"
+                value={selectedObj.rotation ?? 0}
+                min={-360}
+                max={360}
+                step={1}
+                onChange={(val) =>
+                  updateObj({ rotation: n(val) } as Partial<FrameObject>)
+                }
+              />
+            </SimpleGrid>
 
-              <Divider />
-              <FiltersBlendPanel obj={selectedObj} updateObj={updateObj} />
-
-              <Divider />
-              {selectedObj.type === "text" && (
-                <TextObjectFields obj={selectedObj} updateObj={updateObj} />
-              )}
-              {selectedObj.type === "image" && (
-                <ImageObjectFields
-                  obj={selectedObj as ImageObject}
-                  updateObj={updateObj}
-                />
-              )}
-              {selectedObj.type === "answerGroup" && (
-                <AnswerGroupFields
-                  obj={selectedObj as AnswerGroupObject}
-                  updateObj={updateObj}
-                />
-              )}
-              {selectedObj.type === "shape" && (
-                <ShapeObjectFields
-                  obj={selectedObj as ShapeObject}
-                  updateObj={(p) => updateObj(p as Partial<FrameObject>)}
-                />
-              )}
-              {selectedObj.type === "divider" && (
-                <DividerObjectFields
-                  obj={selectedObj as DividerObject}
-                  updateObj={(p) => updateObj(p as Partial<FrameObject>)}
-                />
-              )}
-            </>
-          )}
+            <Divider />
+            {selectedObj.type === "text" && (
+              <TextObjectFields obj={selectedObj} updateObj={updateObj} />
+            )}
+            {selectedObj.type === "image" && (
+              <ImageObjectFields
+                obj={selectedObj as ImageObject}
+                updateObj={updateObj}
+              />
+            )}
+            {selectedObj.type === "answerGroup" && (
+              <AnswerGroupFields
+                obj={selectedObj as AnswerGroupObject}
+                updateObj={updateObj}
+              />
+            )}
+            {selectedObj.type === "shape" && (
+              <ShapeObjectFields
+                obj={selectedObj as ShapeObject}
+                updateObj={(p) => updateObj(p as Partial<FrameObject>)}
+              />
+            )}
+            {selectedObj.type === "divider" && (
+              <DividerObjectFields
+                obj={selectedObj as DividerObject}
+                updateObj={(p) => updateObj(p as Partial<FrameObject>)}
+              />
+            )}
+          </>
         </Stack>
       )}
     </Stack>
